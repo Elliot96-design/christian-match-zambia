@@ -1,0 +1,181 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { appRouter } from "./routers";
+import type { TrpcContext } from "./_core/context";
+
+// Mock db module
+vi.mock("./db", () => ({
+  getChatUnlock: vi.fn(),
+  createChatUnlock: vi.fn(),
+  completeChatUnlock: vi.fn(),
+  getPendingUnlockById: vi.fn(),
+  getUserById: vi.fn(),
+  banUser: vi.fn(),
+  getAllUsers: vi.fn(),
+  getAllPayments: vi.fn(),
+  buildRoomId: (a: number, b: number) => [a, b].sort((x, y) => x - y).join("_"),
+  getMessages: vi.fn(),
+  sendMessage: vi.fn(),
+  browseUsers: vi.fn(),
+  getDistinctLocations: vi.fn(),
+  updateUserProfile: vi.fn(),
+  upsertUser: vi.fn(),
+  getUserByOpenId: vi.fn(),
+}));
+
+vi.mock("./storage", () => ({
+  storagePut: vi.fn(),
+}));
+
+import * as db from "./db";
+
+function makeCtx(overrides: Partial<TrpcContext["user"]> = {}): TrpcContext {
+  const user: TrpcContext["user"] = {
+    id: 1,
+    openId: "user-1",
+    email: "user@test.com",
+    name: "Test User",
+    loginMethod: "manus",
+    role: "user",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    lastSignedIn: new Date(),
+    age: 25,
+    gender: "male",
+    location: "Lusaka",
+    church: "UCZA",
+    bio: "Hello",
+    photoUrl: null,
+    photoKey: null,
+    profileComplete: true,
+    isBanned: false,
+    phone: null,
+    ...overrides,
+  };
+  return {
+    user,
+    req: { protocol: "https", headers: {} } as TrpcContext["req"],
+    res: { clearCookie: vi.fn() } as unknown as TrpcContext["res"],
+  };
+}
+
+function makeAdminCtx(): TrpcContext {
+  return makeCtx({ id: 99, openId: "admin-1", role: "admin" });
+}
+
+describe("chat.checkUnlock", () => {
+  it("returns unlocked=false when no unlock record exists", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.chat.checkUnlock({ targetId: 2 });
+    expect(result.unlocked).toBe(false);
+  });
+
+  it("returns unlocked=true when unlock record exists", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "completed",
+      amount: 10, provider: "mock", reference: "REF123",
+      createdAt: new Date(),
+    });
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.chat.checkUnlock({ targetId: 2 });
+    expect(result.unlocked).toBe(true);
+  });
+});
+
+describe("chat.messages - server-side enforcement", () => {
+  it("throws FORBIDDEN when chat not unlocked", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.chat.messages({ targetId: 2 })).rejects.toThrow();
+  });
+
+  it("returns messages when chat is unlocked", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "completed",
+      amount: 10, provider: "mock", reference: "REF123",
+      createdAt: new Date(),
+    });
+    vi.mocked(db.getMessages).mockResolvedValue([]);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.chat.messages({ targetId: 2 });
+    expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+describe("payment.initiate", () => {
+  it("creates a pending payment record", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue(undefined);
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 2, openId: "user-2", name: "Target", email: null, phone: null,
+      loginMethod: null, role: "user", age: 22, gender: "female",
+      location: "Kitwe", church: "UCZ", bio: null, photoUrl: null,
+      photoKey: null, profileComplete: true, isBanned: false,
+      createdAt: new Date(), updatedAt: new Date(), lastSignedIn: new Date(),
+    });
+    vi.mocked(db.createChatUnlock).mockResolvedValue(42);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.payment.initiate({ targetId: 2, provider: "mock" });
+    expect(result.paymentId).toBe(42);
+    expect(result.amount).toBe(10);
+  });
+
+  it("throws if chat already unlocked", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "completed",
+      amount: 10, provider: "mock", reference: "REF",
+      createdAt: new Date(),
+    });
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.payment.initiate({ targetId: 2, provider: "mock" })).rejects.toThrow();
+  });
+});
+
+describe("payment.confirm", () => {
+  it("completes the payment with a reference", async () => {
+    vi.mocked(db.getPendingUnlockById).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "pending",
+      amount: 10, provider: "mock", reference: null,
+      createdAt: new Date(),
+    });
+    vi.mocked(db.completeChatUnlock).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.payment.confirm({ paymentId: 1, mockReference: "TEST-REF" });
+    expect(result.success).toBe(true);
+    expect(result.reference).toBe("TEST-REF");
+  });
+
+  it("throws FORBIDDEN when payment does not belong to user", async () => {
+    vi.mocked(db.getPendingUnlockById).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.payment.confirm({ paymentId: 99 })).rejects.toThrow();
+  });
+});
+
+describe("admin.banUser", () => {
+  it("allows admin to ban a user", async () => {
+    vi.mocked(db.banUser).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeAdminCtx());
+    const result = await caller.admin.banUser({ userId: 5, ban: true });
+    expect(result.success).toBe(true);
+    expect(db.banUser).toHaveBeenCalledWith(5, true);
+  });
+
+  it("throws FORBIDDEN for non-admin users", async () => {
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.admin.banUser({ userId: 5, ban: true })).rejects.toThrow();
+  });
+});
+
+describe("admin.users", () => {
+  it("returns all users for admin", async () => {
+    vi.mocked(db.getAllUsers).mockResolvedValue([]);
+    const caller = appRouter.createCaller(makeAdminCtx());
+    const result = await caller.admin.users();
+    expect(Array.isArray(result)).toBe(true);
+  });
+
+  it("throws FORBIDDEN for regular users", async () => {
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.admin.users()).rejects.toThrow();
+  });
+});
