@@ -1,7 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { getLoginUrl } from "@/const";
-import { Heart, Users, MessageCircle, Shield } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
+import { Users, MessageCircle, Shield } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 
@@ -34,9 +35,11 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Heart className="w-4 h-4 text-white fill-white" />
-          </div>
+          <img
+            src={LOGO_URL}
+            alt="Christian Match Zambia"
+            className="w-10 h-10 rounded-xl object-cover shadow-sm"
+          />
           <span className="font-semibold text-foreground text-sm">Christian Match Zambia</span>
         </div>
         <a href={getLoginUrl()}>
@@ -49,8 +52,12 @@ export default function Home() {
       {/* Hero */}
       <main className="flex-1 flex flex-col">
         <section className="container py-10 text-center">
-          <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Heart className="w-10 h-10 text-primary fill-primary/20" />
+          <div className="flex justify-center mb-6">
+            <img
+              src={LOGO_URL}
+              alt="Christian Match Zambia Logo"
+              className="w-28 h-28 rounded-3xl object-cover shadow-lg"
+            />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-3 leading-tight">
             Find Your God-Given Partner

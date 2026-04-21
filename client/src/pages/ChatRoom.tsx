@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Lock, Send, User } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -70,6 +71,7 @@ export default function ChatRoom() {
         <button
           onClick={() => navigate(`/profile/${targetId}`)}
           className="w-9 h-9 flex items-center justify-center rounded-full bg-muted"
+          aria-label="Go back"
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
@@ -84,6 +86,8 @@ export default function ChatRoom() {
           <p className="font-semibold text-foreground text-sm truncate">{target?.name ?? "Loading..."}</p>
           <p className="text-xs text-muted-foreground">{target?.church ?? ""}</p>
         </div>
+        {/* Logo right */}
+        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover opacity-80 flex-shrink-0" />
       </header>
 
       {/* Chat area */}

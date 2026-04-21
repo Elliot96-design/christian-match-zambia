@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Camera, Loader2, LogOut, User } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -99,6 +100,7 @@ export default function EditProfile() {
         <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-muted">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
+        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover" />
         <p className="font-semibold text-foreground flex-1">My Profile</p>
         <button
           onClick={handleLogout}

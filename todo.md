@@ -54,3 +54,14 @@
 - [x] Vitest: chat unlock procedure tests
 - [x] Vitest: payment procedure tests
 - [x] Vitest: admin ban procedure tests
+
+## Logo & Navigation Updates
+- [x] Upload and set new Christian Match Zambia logo image
+- [x] Add logo to Home/Landing page header
+- [x] Add logo to ProfileSetup page header
+- [x] Add back button to ProfileView page
+- [x] Add back button to ChatRoom page
+- [x] Add sign-out button to Browse page header
+- [x] Add sign-out button to EditProfile page header
+- [x] Add back + sign-out to AdminPanel header
+- [x] Create shared AppHeader component with logo, optional back, optional sign-out

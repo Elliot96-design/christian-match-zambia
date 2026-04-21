@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { Camera, ChevronRight, Heart, Loader2 } from "lucide-react";
+import { Camera, ChevronRight, LogOut, Loader2 } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -16,7 +17,7 @@ const ZAMBIA_LOCATIONS = [
 ];
 
 export default function ProfileSetup() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
@@ -92,13 +93,18 @@ export default function ProfileSetup() {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-border px-4 py-3 flex items-center gap-3">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-          <Heart className="w-4 h-4 text-white fill-white" />
-        </div>
-        <div>
+        <img src={LOGO_URL} alt="Christian Match Zambia" className="w-9 h-9 rounded-xl object-cover shadow-sm flex-shrink-0" />
+        <div className="flex-1">
           <p className="font-semibold text-foreground text-sm">Set Up Your Profile</p>
           <p className="text-xs text-muted-foreground">Step {step} of 2</p>
         </div>
+        <button
+          onClick={async () => { await logout(); navigate("/"); }}
+          aria-label="Sign out"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70"
+        >
+          <LogOut className="w-4 h-4 text-destructive" />
+        </button>
       </header>
 
       {/* Progress bar */}

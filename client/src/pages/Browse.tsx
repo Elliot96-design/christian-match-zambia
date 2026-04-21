@@ -2,7 +2,6 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import {
-  Heart,
   LogOut,
   MapPin,
   MessageCircle,
@@ -12,6 +11,7 @@ import {
   X,
   Shield,
 } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -64,9 +64,7 @@ export default function Browse() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <Heart className="w-4 h-4 text-white fill-white" />
-          </div>
+          <img src={LOGO_URL} alt="Christian Match Zambia" className="w-9 h-9 rounded-xl object-cover shadow-sm" />
           <span className="font-semibold text-foreground text-sm">Christian Match</span>
         </div>
         <div className="flex items-center gap-2">
@@ -79,6 +77,13 @@ export default function Browse() {
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
+          </button>
+          <button
+            onClick={handleLogout}
+            aria-label="Sign out"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70"
+          >
+            <LogOut className="w-4 h-4 text-destructive" />
           </button>
         </div>
       </header>

@@ -1,7 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Ban, CheckCircle, CreditCard, Loader2, Shield, Users } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle, CreditCard, Loader2, LogOut, Shield, Users } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -9,7 +10,7 @@ import { toast } from "sonner";
 type Tab = "users" | "payments";
 
 export default function AdminPanel() {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<Tab>("users");
   const utils = trpc.useUtils();
@@ -45,13 +46,21 @@ export default function AdminPanel() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-muted">
+        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-muted" aria-label="Back">
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
+        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover" />
         <div className="flex items-center gap-2 flex-1">
-          <Shield className="w-5 h-5 text-primary" />
+          <Shield className="w-4 h-4 text-primary" />
           <p className="font-semibold text-foreground">Admin Panel</p>
         </div>
+        <button
+          onClick={async () => { await logout(); navigate("/"); }}
+          aria-label="Sign out"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70"
+        >
+          <LogOut className="w-4 h-4 text-destructive" />
+        </button>
       </header>
 
       {/* Stats */}

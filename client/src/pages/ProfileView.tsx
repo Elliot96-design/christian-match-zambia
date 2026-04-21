@@ -1,7 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Church, Lock, MapPin, MessageCircle, User } from "lucide-react";
+import { ArrowLeft, Church, Lock, LogOut, MapPin, MessageCircle, User } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import PaymentModal from "@/components/PaymentModal";
@@ -78,6 +79,11 @@ export default function ProfileView() {
         >
           <ArrowLeft className="w-5 h-5 text-foreground" />
         </button>
+
+        {/* Logo centre */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2">
+          <img src={LOGO_URL} alt="Christian Match Zambia" className="w-9 h-9 rounded-xl object-cover shadow-sm opacity-90" />
+        </div>
 
         {/* Name overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
