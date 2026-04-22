@@ -32,7 +32,7 @@ export default function AppHeader({ backTo, showSignOut, title, rightSlot }: App
   };
 
   return (
-    <header className="sticky top-0 z-20 bg-white border-b border-border">
+    <header className="sticky top-0 z-20 hero-gradient">
       <div className="flex items-center h-14 px-3 gap-2">
         {/* Left: back button or spacer */}
         <div className="w-10 flex-shrink-0">
@@ -40,24 +40,25 @@ export default function AppHeader({ backTo, showSignOut, title, rightSlot }: App
             <button
               onClick={handleBack}
               aria-label="Go back"
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70 transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/15 active:bg-white/25 transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
+              <ArrowLeft className="w-5 h-5 text-white" />
             </button>
           ) : null}
         </div>
 
-        {/* Centre: logo or title */}
-        <div className="flex-1 flex items-center justify-center">
+        {/* Centre: logo + brand name or custom title */}
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <img
+            src={LOGO_URL}
+            alt="Faithful Hearts"
+            className="h-8 w-8 rounded-xl object-cover shadow-sm"
+            loading="eager"
+          />
           {title ? (
-            <span className="font-semibold text-foreground text-base">{title}</span>
+            <span className="font-display font-bold text-white text-base">{title}</span>
           ) : (
-            <img
-              src={LOGO_URL}
-              alt="Christian Match Zambia"
-              className="h-9 w-9 rounded-xl object-cover shadow-sm"
-              loading="eager"
-            />
+            <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
           )}
         </div>
 
@@ -69,9 +70,9 @@ export default function AppHeader({ backTo, showSignOut, title, rightSlot }: App
             <button
               onClick={handleSignOut}
               aria-label="Sign out"
-              className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70 transition-colors"
+              className="text-white/70 text-xs font-medium"
             >
-              <LogOut className="w-4 h-4 text-destructive" />
+              Sign out
             </button>
           ) : null}
         </div>

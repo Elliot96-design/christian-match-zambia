@@ -19,6 +19,7 @@ import { useState } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 import PaymentModal from "@/components/PaymentModal";
+import BottomNav, { NavTab } from "@/components/BottomNav";
 
 const ZAMBIA_LOCATIONS = [
   "Lusaka", "Kitwe", "Ndola", "Kabwe", "Chingola", "Mufulira",
@@ -33,12 +34,10 @@ const DAILY_VERSES = [
   { text: "He who finds a wife finds what is good and receives favour from the Lord.", ref: "Proverbs 18:22" },
 ];
 
-type Tab = "home" | "swipe" | "chat" | "profile" | "chatroom";
-
 export default function Browse() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<Tab>("home");
+  const [activeTab, setActiveTab] = useState<NavTab>("home");
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
   const [filterLocation, setFilterLocation] = useState<string | undefined>();
   const [showFilters, setShowFilters] = useState(false);
@@ -87,43 +86,6 @@ export default function Browse() {
     setSelectedUserId(userId);
     setShowPayment(true);
   };
-
-  // ── Bottom nav items ──────────────────────────────────────
-  const navItems: { id: Tab; icon: React.ReactNode; label: string }[] = [
-    {
-      id: "home",
-      label: "Home",
-      icon: <Home className="w-5 h-5" />,
-    },
-    {
-      id: "swipe",
-      label: "Swipe",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
-          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-        </svg>
-      ),
-    },
-    {
-      id: "chat",
-      label: "Chat",
-      icon: <MessageCircle className="w-5 h-5" />,
-    },
-    {
-      id: "profile",
-      label: "Profile",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
-          <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-        </svg>
-      ),
-    },
-    {
-      id: "chatroom",
-      label: "Chatroom",
-      icon: <Users className="w-5 h-5" />,
-    },
-  ];
 
   // ── Render content for active tab ─────────────────────────
   const renderContent = () => {
@@ -497,39 +459,7 @@ export default function Browse() {
       </div>
 
       {/* 5-tab bottom nav */}
-      <nav className="bottom-nav flex-shrink-0 flex items-center justify-around px-2 py-2 safe-area-pb">
-        {navItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.id === "chatroom" || item.id === "chat") {
-                  setActiveTab(item.id);
-                } else {
-                  setActiveTab(item.id);
-                }
-              }}
-              className="flex flex-col items-center gap-1 py-1 px-3 relative"
-            >
-              <span className={isActive ? "text-gold" : "text-white/50"}>
-                {item.icon}
-              </span>
-              <span className={`text-[10px] font-medium ${isActive ? "text-gold" : "text-white/50"}`}>
-                {item.label}
-              </span>
-              {/* Active indicator dot */}
-              {isActive && (
-                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gold" />
-              )}
-              {/* Chat notification dot */}
-              {item.id === "chat" && !isActive && (
-                <span className="absolute top-0 right-2 w-2 h-2 rounded-full bg-yellow-400" />
-              )}
-            </button>
-          );
-        })}
-      </nav>
+      <BottomNav active={activeTab} />
 
       {/* Payment modal */}
       {showPayment && selectedUserId && (
