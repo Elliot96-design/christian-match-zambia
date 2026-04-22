@@ -43,53 +43,44 @@ export default function AdminPanel() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col max-w-[480px] mx-auto">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-muted" aria-label="Back">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+      <header className="hero-gradient px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-white/15" aria-label="Back">
+          <ArrowLeft className="w-5 h-5 text-white" />
         </button>
-        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover" />
-        <div className="flex items-center gap-2 flex-1">
-          <Shield className="w-4 h-4 text-primary" />
-          <p className="font-semibold text-foreground">Admin Panel</p>
-        </div>
-        <button
-          onClick={async () => { await logout(); navigate("/"); }}
-          aria-label="Sign out"
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70"
-        >
-          <LogOut className="w-4 h-4 text-destructive" />
-        </button>
+        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover opacity-90" />
+        <p className="font-display font-bold text-white text-base flex-1">Admin Panel</p>
+        <span className="badge-premium text-xs">Admin</span>
       </header>
 
-      {/* Stats */}
+      {/* Stats + Tabs */}
       <div className="container py-4">
         <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-card border border-border rounded-xl p-4">
+          <div className="bg-card border border-border rounded-2xl p-4">
             <p className="text-xs text-muted-foreground">Total Users</p>
             <p className="text-2xl font-bold text-foreground">{users?.length ?? "—"}</p>
           </div>
-          <div className="bg-card border border-border rounded-xl p-4">
+          <div className="bg-card border border-border rounded-2xl p-4">
             <p className="text-xs text-muted-foreground">Total Payments</p>
             <p className="text-2xl font-bold text-foreground">{payments?.length ?? "—"}</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-4">
+        <div className="bg-secondary rounded-2xl p-1 flex mb-4">
           <button
             onClick={() => setTab("users")}
-            className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-sm font-medium border transition-colors ${
-              tab === "users" ? "bg-primary text-white border-primary" : "border-border text-foreground bg-white"
+            className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all ${
+              tab === "users" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"
             }`}
           >
             <Users className="w-4 h-4" /> Users
           </button>
           <button
             onClick={() => setTab("payments")}
-            className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-sm font-medium border transition-colors ${
-              tab === "payments" ? "bg-primary text-white border-primary" : "border-border text-foreground bg-white"
+            className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all ${
+              tab === "payments" ? "bg-primary text-white shadow-sm" : "text-muted-foreground"
             }`}
           >
             <CreditCard className="w-4 h-4" /> Payments

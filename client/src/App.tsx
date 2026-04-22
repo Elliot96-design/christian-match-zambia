@@ -11,11 +11,13 @@ import ProfileView from "./pages/ProfileView";
 import ChatRoom from "./pages/ChatRoom";
 import AdminPanel from "./pages/AdminPanel";
 import EditProfile from "./pages/EditProfile";
+import LoginSignup from "./pages/LoginSignup";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/login" component={LoginSignup} />
       <Route path="/setup" component={ProfileSetup} />
       <Route path="/browse" component={Browse} />
       <Route path="/profile/:id" component={ProfileView} />

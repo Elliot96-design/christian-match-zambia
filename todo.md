@@ -65,3 +65,13 @@
 - [x] Add sign-out button to EditProfile page header
 - [x] Add back + sign-out to AdminPanel header
 - [x] Create shared AppHeader component with logo, optional back, optional sign-out
+
+## Premium UI Upgrade (Faithful Hearts theme)
+- [ ] Update global CSS: deep purple (#4A0E8F / #3D0C7A), gold (#D4A017 / #F0C040) variables, Playfair Display + Inter fonts
+- [ ] Rename app to "Faithful Hearts" across index.html, App.tsx, and AppHeader
+- [ ] Rebuild Welcome page: purple hero gradient, logo, tagline, couple image, How It Works steps, Get Started CTA
+- [ ] Rebuild Login/Signup page: Log In / Sign Up tab switcher, email+password form, social login (Google/Apple), forgot password
+- [ ] Rebuild User Landing (Browse) page: greeting header, profile swipe card with pay-to-unlock banner, Premium upsell card, Daily Verse, 5-tab bottom nav
+- [ ] Update BottomNav to 5 tabs: Home, Swipe, Chat, Profile, Chatroom
+- [ ] Update ProfileView, ChatRoom, EditProfile, AdminPanel to match purple/gold theme
+- [ ] Update AppHeader to purple background with gold logo text

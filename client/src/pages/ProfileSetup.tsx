@@ -90,28 +90,28 @@ export default function ProfileSetup() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen flex flex-col max-w-[480px] mx-auto">
       {/* Header */}
-      <header className="bg-white border-b border-border px-4 py-3 flex items-center gap-3">
-        <img src={LOGO_URL} alt="Christian Match Zambia" className="w-9 h-9 rounded-xl object-cover shadow-sm flex-shrink-0" />
+      <header className="hero-gradient px-5 pt-5 pb-4 flex items-center gap-3">
+        <img src={LOGO_URL} alt="Faithful Hearts" className="w-9 h-9 rounded-xl object-cover shadow flex-shrink-0" />
         <div className="flex-1">
-          <p className="font-semibold text-foreground text-sm">Set Up Your Profile</p>
-          <p className="text-xs text-muted-foreground">Step {step} of 2</p>
+          <p className="font-display font-bold text-white text-sm">Faithful Hearts</p>
+          <p className="text-white/60 text-xs">Step {step} of 2 — {step === 1 ? "Your Story" : "Faith & Location"}</p>
         </div>
         <button
           onClick={async () => { await logout(); navigate("/"); }}
           aria-label="Sign out"
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-muted active:bg-muted/70"
+          className="text-white/60 text-xs font-medium"
         >
-          <LogOut className="w-4 h-4 text-destructive" />
+          Sign out
         </button>
       </header>
 
       {/* Progress bar */}
-      <div className="h-1 bg-muted">
+      <div className="h-1.5 bg-white/20" style={{ background: "oklch(0.28 0.20 290)" }}>
         <div
-          className="h-full bg-primary transition-all duration-300"
-          style={{ width: step === 1 ? "50%" : "100%" }}
+          className="h-full transition-all duration-300"
+          style={{ width: step === 1 ? "50%" : "100%", background: "oklch(0.72 0.16 80)" }}
         />
       </div>
 

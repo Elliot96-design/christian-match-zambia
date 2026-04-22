@@ -94,19 +94,18 @@ export default function EditProfile() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background flex flex-col max-w-[480px] mx-auto">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3 flex items-center gap-3">
-        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-muted">
-          <ArrowLeft className="w-5 h-5 text-foreground" />
+      <header className="hero-gradient px-4 py-3 flex items-center gap-3 flex-shrink-0">
+        <button onClick={() => navigate("/browse")} className="w-9 h-9 flex items-center justify-center rounded-full bg-white/15">
+          <ArrowLeft className="w-5 h-5 text-white" />
         </button>
-        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover" />
-        <p className="font-semibold text-foreground flex-1">My Profile</p>
+        <img src={LOGO_URL} alt="" className="w-8 h-8 rounded-lg object-cover opacity-90" />
+        <p className="font-display font-bold text-white text-base flex-1">Edit Profile</p>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-1.5 text-destructive text-sm font-medium"
+          className="text-white/60 text-xs font-medium"
         >
-          <LogOut className="w-4 h-4" />
           Sign Out
         </button>
       </header>
@@ -193,7 +192,6 @@ export default function EditProfile() {
         </Button>
       </div>
 
-      <BottomNav active="profile" />
     </div>
   );
 }

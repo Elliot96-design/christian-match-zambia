@@ -1,8 +1,8 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
-import { ArrowLeft, Church, Lock, LogOut, MapPin, MessageCircle, User } from "lucide-react";
 import { LOGO_URL } from "@/components/AppHeader";
+import { ArrowLeft, Church, Crown, Lock, MapPin, MessageCircle, User } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useParams } from "wouter";
 import PaymentModal from "@/components/PaymentModal";
@@ -55,7 +55,7 @@ export default function ProfileView() {
   const isUnlocked = unlockStatus?.unlocked ?? false;
 
   return (
-    <div className="min-h-screen bg-background pb-6">
+    <div className="min-h-screen bg-background pb-6 max-w-[480px] mx-auto">
       {/* Photo Header */}
       <div className="relative">
         <div className="aspect-[4/5] bg-muted overflow-hidden max-h-[420px]">
@@ -82,12 +82,17 @@ export default function ProfileView() {
 
         {/* Logo centre */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2">
-          <img src={LOGO_URL} alt="Christian Match Zambia" className="w-9 h-9 rounded-xl object-cover shadow-sm opacity-90" />
+          <img src={LOGO_URL} alt="Faithful Hearts" className="w-9 h-9 rounded-xl object-cover shadow-sm opacity-90" />
         </div>
 
         {/* Name overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-          <h1 className="text-white text-2xl font-bold">{profile.name ?? "Anonymous"}</h1>
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
+          <div className="flex items-center gap-2">
+            <h1 className="text-white text-2xl font-bold font-display">{profile.name ?? "Anonymous"}</h1>
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-blue-400">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
           <p className="text-white/80 text-sm">
             {profile.age ? `${profile.age} years old` : ""}
             {profile.age && profile.gender ? " · " : ""}
@@ -98,8 +103,8 @@ export default function ProfileView() {
 
       {/* Details */}
       <div className="container py-5 space-y-5">
-        {/* Location & Church */}
-        <div className="flex flex-wrap gap-3">
+        {/* Location & Church tags */}
+        <div className="flex flex-wrap gap-2">
           {profile.location && (
             <div className="flex items-center gap-1.5 bg-secondary rounded-full px-3 py-1.5">
               <MapPin className="w-3.5 h-3.5 text-primary" />
@@ -116,59 +121,68 @@ export default function ProfileView() {
 
         {/* Bio */}
         {profile.bio && (
-          <div>
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-2">About</p>
-            <p className="text-foreground text-sm leading-relaxed">{profile.bio}</p>
+          <div className="bg-card rounded-2xl p-4 border border-border">
+            <p className="text-sm font-semibold text-foreground mb-1">About</p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{profile.bio}</p>
           </div>
         )}
 
-        {/* Chat Button */}
+        {/* Premium upsell */}
+        {!isOwnProfile && !isUnlocked && (
+          <div className="rounded-2xl p-4 flex items-center gap-3" style={{ background: "oklch(0.96 0.02 290)", border: "1px solid oklch(0.88 0.04 290)" }}>
+            <Crown className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+            <p className="text-sm text-foreground">
+              <span className="font-semibold">Premium Members</span> can unlock unlimited chats and build meaningful connections.
+            </p>
+          </div>
+        )}
+
+        {/* Chat action */}
         {!isOwnProfile && (
-          <div className="pt-2">
+          <div>
             {isUnlocked ? (
-              <Button
-                className="w-full h-12 text-base rounded-xl"
+              <button
                 onClick={() => navigate(`/chat/${profile.id}`)}
+                className="btn-purple w-full h-14 flex items-center justify-center gap-2 text-base"
               >
-                <MessageCircle className="w-5 h-5 mr-2" />
+                <MessageCircle className="w-5 h-5" />
                 Open Chat
-              </Button>
+              </button>
             ) : (
-              <div className="space-y-3">
-                <Button
-                  className="w-full h-12 text-base rounded-xl bg-amber-500 hover:bg-amber-600 text-white"
-                  onClick={() => setShowPayment(true)}
-                >
-                  <Lock className="w-5 h-5 mr-2" />
-                  Unlock chat to start conversation
-                </Button>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center">
-                  <p className="text-amber-800 text-xs font-medium">
-                    One-time payment of K10 to unlock private chat with {profile.name?.split(" ")[0] ?? "this person"}.
-                    Chat stays unlocked permanently.
-                  </p>
-                </div>
-              </div>
+              <button
+                onClick={() => setShowPayment(true)}
+                className="w-full h-14 flex items-center justify-center gap-2 text-white text-base font-semibold rounded-2xl"
+                style={{ background: "oklch(0.28 0.20 290)" }}
+              >
+                <Lock className="w-5 h-5" />
+                <span>
+                  Pay <span className="text-gold font-bold">K15</span> to unlock chat with {profile.name?.split(" ")[0] ?? "them"}
+                </span>
+              </button>
+            )}
+            {!isUnlocked && (
+              <p className="text-center text-muted-foreground text-xs mt-2">
+                Unlock chat to start conversation · One-time payment per person
+              </p>
             )}
           </div>
         )}
 
         {isOwnProfile && (
-          <Button
-            variant="outline"
-            className="w-full h-12 rounded-xl"
+          <button
             onClick={() => navigate("/edit-profile")}
+            className="btn-purple w-full h-14 flex items-center justify-center gap-2 text-base"
           >
             Edit My Profile
-          </Button>
+          </button>
         )}
       </div>
 
-      {/* Payment Modal */}
-      {showPayment && profile && (
+      {/* Payment modal */}
+      {showPayment && (
         <PaymentModal
           targetId={profile.id}
-          targetName={profile.name ?? "this person"}
+          targetName={profile.name ?? "this member"}
           onClose={() => setShowPayment(false)}
           onSuccess={() => {
             setShowPayment(false);
