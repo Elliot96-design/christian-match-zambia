@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { LOGO_URL } from "@/components/AppHeader";
 import { ArrowLeft, Church, Crown, Lock, MapPin, MessageCircle, User } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import PaymentModal from "@/components/PaymentModal";
 
@@ -24,7 +24,11 @@ export default function ProfileView() {
     { enabled: !!isAuthenticated && !!userId && userId !== me?.id }
   );
 
-  if (!isAuthenticated) { navigate("/"); return null; }
+  useEffect(() => {
+    if (!isAuthenticated) navigate("/");
+  }, [isAuthenticated, navigate]);
+
+  if (!isAuthenticated) return null;
 
   if (isLoading) {
     return (

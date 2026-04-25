@@ -75,3 +75,15 @@
 - [x] Update BottomNav to 5 tabs: Home, Swipe, Chat, Profile, Chatroom
 - [x] Update ProfileView, ChatRoom, EditProfile, AdminPanel to match purple/gold theme
 - [x] Update AppHeader to purple background with gold logo text
+
+## Profile Screen Rebuild & Mobile Fixes
+- [x] Add isPremium field to users table in schema
+- [x] Add userPhotos table for multiple profile photos
+- [x] Add profile.myPhotos, profile.addPhoto, profile.premiumStatus, profile.completionScore procedures
+- [x] Rebuild Profile tab in Browse.tsx: purple header, avatar+camera, bio quote, premium/upgrade badge, photo gallery, completion bar, Personal Details section, Account & Settings section
+- [x] Show "Premium Member" badge if isPremium=true; show "Upgrade to Premium" upgrade nudge if user has paid K10 for any single chat unlock
+- [x] Fix Welcome page to fit mobile viewport without scrolling (compact layout)
+- [x] Fix Dashboard/Browse Home tab to fit mobile viewport without scrolling
+- [x] Verify all routing flows: login → profile setup → browse → profile view → payment → chat
+- [x] Ensure banned users are redirected correctly
+- [x] Ensure admin route is protected

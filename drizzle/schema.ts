@@ -26,6 +26,7 @@ export const users = mysqlTable("users", {
   photoKey: text("photoKey"),
   profileComplete: boolean("profileComplete").default(false).notNull(),
   isBanned: boolean("isBanned").default(false).notNull(),
+  isPremium: boolean("isPremium").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -60,3 +61,16 @@ export const messages = mysqlTable("messages", {
 
 export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
+
+// Additional profile photos (up to 5 per user)
+export const userPhotos = mysqlTable("user_photos", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  photoUrl: text("photoUrl").notNull(),
+  photoKey: text("photoKey").notNull(),
+  isMain: boolean("isMain").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserPhoto = typeof userPhotos.$inferSelect;
+export type InsertUserPhoto = typeof userPhotos.$inferInsert;

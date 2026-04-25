@@ -5,10 +5,13 @@ import {
   InsertChatUnlock,
   InsertMessage,
   InsertUser,
+  InsertUserPhoto,
   Message,
   User,
+  UserPhoto,
   chatUnlocks,
   messages,
+  userPhotos,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
@@ -143,6 +146,54 @@ export async function getDistinctLocations(): Promise<string[]> {
     .from(users)
     .where(and(eq(users.profileComplete, true), eq(users.isBanned, false)));
   return rows.map((r) => r.location).filter(Boolean) as string[];
+}
+
+export async function setUserPremium(userId: number, isPremium: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ isPremium }).where(eq(users.id, userId));
+}
+
+export async function hasAnyCompletedUnlock(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db
+    .select({ id: chatUnlocks.id })
+    .from(chatUnlocks)
+    .where(and(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.status, "completed")))
+    .limit(1);
+  return result.length > 0;
+}
+
+// ─── User Photos ──────────────────────────────────────────────────────────────
+
+export async function getUserPhotos(userId: number): Promise<UserPhoto[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(userPhotos)
+    .where(eq(userPhotos.userId, userId))
+    .orderBy(desc(userPhotos.createdAt));
+}
+
+export async function addUserPhoto(data: InsertUserPhoto): Promise<UserPhoto> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(userPhotos).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(userPhotos).where(eq(userPhotos.id, insertId)).limit(1);
+  return rows[0];
+}
+
+export async function countUserPhotos(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(userPhotos)
+    .where(eq(userPhotos.userId, userId));
+  return Number(result[0]?.count ?? 0);
 }
 
 // ─── Chat Unlocks ─────────────────────────────────────────────────────────────

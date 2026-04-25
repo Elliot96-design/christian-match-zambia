@@ -48,7 +48,11 @@ export default function ChatRoom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  if (!isAuthenticated) { navigate("/"); return null; }
+  useEffect(() => {
+    if (!isAuthenticated) navigate("/");
+  }, [isAuthenticated, navigate]);
+
+  if (!isAuthenticated) return null;
 
   const handleSend = async () => {
     const content = message.trim();
@@ -65,7 +69,7 @@ export default function ChatRoom() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-[480px] mx-auto">
+      <div className="h-screen bg-background flex flex-col max-w-[480px] mx-auto overflow-hidden">
       {/* Header */}
       <header className="hero-gradient px-4 py-3 flex items-center gap-3 flex-shrink-0">
         <button
@@ -98,7 +102,7 @@ export default function ChatRoom() {
             </div>
             <p className="font-display font-bold text-foreground text-lg">Chat Locked</p>
             <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
-              This chat is not unlocked. Go back to the profile and pay K15 to unlock.
+              This chat is not unlocked. Go back to the profile and pay K10 to unlock.
             </p>
             <Button
               className="mt-5 btn-purple px-8 h-12"

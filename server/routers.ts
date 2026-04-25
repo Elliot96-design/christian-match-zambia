@@ -5,10 +5,12 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import {
+  addUserPhoto,
   banUser,
   browseUsers,
   buildRoomId,
   completeChatUnlock,
+  countUserPhotos,
   createChatUnlock,
   getAllPayments,
   getAllUsers,
@@ -17,7 +19,10 @@ import {
   getMessages,
   getPendingUnlockById,
   getUserById,
+  getUserPhotos,
+  hasAnyCompletedUnlock,
   sendMessage,
+  setUserPremium,
   updateUserProfile,
 } from "./db";
 import { storagePut } from "./storage";
@@ -86,7 +91,7 @@ export const appRouter = router({
     uploadPhoto: protectedProcedure
       .input(
         z.object({
-          base64: z.string(), // data:image/...;base64,...
+          base64: z.string(),
           mimeType: z.string(),
         })
       )
@@ -102,6 +107,73 @@ export const appRouter = router({
         await updateUserProfile(ctx.user.id, { photoUrl: url, photoKey: key });
         return { url };
       }),
+
+    // Get all photos for the current user
+    myPhotos: protectedProcedure.query(async ({ ctx }) => {
+      return getUserPhotos(ctx.user.id);
+    }),
+
+    // Add an extra photo (max 5)
+    addPhoto: protectedProcedure
+      .input(z.object({ base64: z.string(), mimeType: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const count = await countUserPhotos(ctx.user.id);
+        if (count >= 5)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Maximum 5 photos allowed." });
+
+        const base64Data = input.base64.replace(/^data:[^;]+;base64,/, "");
+        const buffer = Buffer.from(base64Data, "base64");
+        if (buffer.length > 2 * 1024 * 1024)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Image too large (max 2MB)" });
+
+        const ext = input.mimeType.split("/")[1] ?? "jpg";
+        const key = `gallery/${ctx.user.id}-${nanoid(8)}.${ext}`;
+        const { url } = await storagePut(key, buffer, input.mimeType);
+        const photo = await addUserPhoto({
+          userId: ctx.user.id,
+          photoUrl: url,
+          photoKey: key,
+          isMain: count === 0,
+        });
+        return photo;
+      }),
+
+    // Check if current user qualifies for premium upgrade nudge
+    premiumStatus: protectedProcedure.query(async ({ ctx }) => {
+      const hasPaid = await hasAnyCompletedUnlock(ctx.user.id);
+      return {
+        isPremium: ctx.user.isPremium,
+        hasPaidUnlock: hasPaid,
+        // Show upgrade nudge if they've paid at least one K10 unlock but aren't premium yet
+        showUpgradeNudge: hasPaid && !ctx.user.isPremium,
+      };
+    }),
+
+    // Upgrade current user to premium (admin-granted or after real payment integration)
+    upgradeToPremium: protectedProcedure
+      .input(z.object({ confirm: z.literal(true) }))
+      .mutation(async ({ ctx }) => {
+        if (ctx.user.isPremium)
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
+        await setUserPremium(ctx.user.id, true);
+        return { success: true };
+      }),
+
+    // Calculate profile completion score
+    completionScore: protectedProcedure.query(async ({ ctx }) => {
+      const u = ctx.user;
+      const fields = [
+        !!u.name,
+        !!u.age,
+        !!u.gender,
+        !!u.location,
+        !!u.church,
+        !!u.bio,
+        !!u.photoUrl,
+      ];
+      const score = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+      return { score };
+    }),
   }),
 
   // ─── Browse ───────────────────────────────────────────────────────────────

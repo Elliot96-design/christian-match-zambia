@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, Ban, CheckCircle, CreditCard, Loader2, LogOut, Shield, Users } from "lucide-react";
 import { LOGO_URL } from "@/components/AppHeader";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -31,16 +31,19 @@ export default function AdminPanel() {
     onError: () => toast.error("Failed to update user"),
   });
 
+  useEffect(() => {
+    if (!loading && (!isAuthenticated || user?.role !== "admin")) {
+      navigate("/browse");
+    }
+  }, [loading, isAuthenticated, user, navigate]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
     </div>
   );
 
-  if (!isAuthenticated || user?.role !== "admin") {
-    navigate("/browse");
-    return null;
-  }
+  if (!isAuthenticated || user?.role !== "admin") return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-[480px] mx-auto">

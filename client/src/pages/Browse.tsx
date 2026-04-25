@@ -2,30 +2,15 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { LOGO_URL } from "@/components/AppHeader";
 import {
-  Bell,
-  Crown,
-  Heart,
-  Home,
-  Lock,
-  MapPin,
-  MessageCircle,
-  RefreshCw,
-  Settings,
-  Shield,
-  Users,
-  X,
+  Bell, Camera, ChevronRight, Crown, Heart, HelpCircle,
+  Lock, LogOut, MapPin, MessageCircle, RefreshCw,
+  Settings, Shield, Star, Users, X,
 } from "lucide-react";
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import PaymentModal from "@/components/PaymentModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
-
-const ZAMBIA_LOCATIONS = [
-  "Lusaka", "Kitwe", "Ndola", "Kabwe", "Chingola", "Mufulira",
-  "Livingstone", "Luanshya", "Chipata", "Kasama", "Solwezi",
-  "Mongu", "Mansa", "Choma", "Mazabuka", "Kafue", "Other",
-];
 
 const DAILY_VERSES = [
   { text: "Commit to the Lord whatever you do, and he will establish your plans.", ref: "Proverbs 16:3" },
@@ -34,25 +19,488 @@ const DAILY_VERSES = [
   { text: "He who finds a wife finds what is good and receives favour from the Lord.", ref: "Proverbs 18:22" },
 ];
 
+const ZAMBIA_LOCATIONS = [
+  "Lusaka", "Kitwe", "Ndola", "Kabwe", "Chingola", "Mufulira",
+  "Livingstone", "Luanshya", "Chipata", "Kasama", "Solwezi",
+  "Mongu", "Mansa", "Choma", "Mazabuka", "Kafue", "Other",
+];
+
+// ─── Inline SVG icon helpers ──────────────────────────────────────────────────
+const PersonIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+    <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+  </svg>
+);
+const BookIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+  </svg>
+);
+const HeartHandIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+  </svg>
+);
+const ShieldIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
+const GearIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} className={className}>
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+// ─── Profile Tab Component ────────────────────────────────────────────────────
+function ProfileTab({ user, onLogout, navigate }: {
+  user: NonNullable<ReturnType<typeof useAuth>["user"]>;
+  onLogout: () => void;
+  navigate: (path: string) => void;
+}) {
+  const utils = trpc.useUtils();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const addPhotoRef = useRef<HTMLInputElement>(null);
+
+  const { data: premiumStatus } = trpc.profile.premiumStatus.useQuery();
+  const { data: completionData } = trpc.profile.completionScore.useQuery();
+  const { data: myPhotos, refetch: refetchPhotos } = trpc.profile.myPhotos.useQuery();
+
+  const uploadMainPhoto = trpc.profile.uploadPhoto.useMutation({
+    onSuccess: () => {
+      utils.auth.me.invalidate();
+      toast.success("Profile photo updated!");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const addPhoto = trpc.profile.addPhoto.useMutation({
+    onSuccess: () => {
+      refetchPhotos();
+      toast.success("Photo added!");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const upgradeToPremium = trpc.profile.upgradeToPremium.useMutation({
+    onSuccess: () => {
+      utils.profile.premiumStatus.invalidate();
+      utils.auth.me.invalidate();
+      toast.success("Welcome to Premium! 🎉");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      uploadMainPhoto.mutate({ base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddPhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const base64 = ev.target?.result as string;
+      addPhoto.mutate({ base64, mimeType: file.type });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const score = completionData?.score ?? 0;
+  const isPremium = premiumStatus?.isPremium ?? user.isPremium;
+  const showUpgradeNudge = premiumStatus?.showUpgradeNudge ?? false;
+
+  const menuItemClass =
+    "flex items-center gap-3 px-4 py-3.5 bg-white active:bg-gray-50 transition-colors cursor-pointer";
+  const iconWrapClass =
+    "w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0";
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24" style={{ background: "oklch(0.97 0.01 290)" }}>
+      {/* ── Purple header with avatar ─────────────────────────── */}
+      <div className="hero-gradient px-5 pt-5 pb-8">
+        <div className="flex items-start gap-4">
+          {/* Avatar with camera button */}
+          <div className="relative flex-shrink-0">
+            <div
+              className="w-20 h-20 rounded-full border-4 border-white overflow-hidden bg-white/20"
+              style={{ boxShadow: "0 0 0 2px oklch(0.72 0.16 80)" }}
+            >
+              {user.photoUrl ? (
+                <img src={user.photoUrl} alt={user.name ?? ""} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <PersonIcon className="w-10 h-10 text-white/60" />
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-white flex items-center justify-center shadow-md"
+              aria-label="Change photo"
+            >
+              <Camera className="w-3.5 h-3.5" style={{ color: "oklch(0.28 0.20 290)" }} />
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleMainPhotoChange} />
+          </div>
+
+          {/* Name / details */}
+          <div className="flex-1 min-w-0 pt-1">
+            <div className="flex items-center gap-2">
+              <h2 className="font-display font-bold text-white text-xl leading-tight truncate">
+                {user.name ?? "Your Name"}
+              </h2>
+              <button
+                onClick={() => navigate("/edit-profile")}
+                className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0"
+                aria-label="Edit profile"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-3 h-3">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-white/80 text-sm mt-0.5">
+              {user.age ? `${user.age}` : ""}
+              {user.age && user.location ? " • " : ""}
+              {user.location && (
+                <span className="inline-flex items-center gap-0.5">
+                  <MapPin className="w-3 h-3" />
+                  {user.location}
+                </span>
+              )}
+            </p>
+            {user.church && (
+              <p className="text-white/70 text-xs mt-0.5 truncate">{user.church}</p>
+            )}
+            {user.bio && (
+              <p className="text-white/80 text-xs mt-2 italic leading-relaxed line-clamp-2">
+                "{user.bio}"
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Premium / Upgrade badge ───────────────────────────── */}
+      <div className="px-4 -mt-4">
+        {isPremium ? (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: "oklch(0.22 0.18 290)", border: "1px solid oklch(0.72 0.16 80 / 0.4)" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "oklch(0.72 0.16 80 / 0.2)" }}
+            >
+              <Crown className="w-5 h-5" style={{ color: "oklch(0.72 0.16 80)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-sm">
+                <span className="text-white">Premium </span>
+                <span style={{ color: "oklch(0.72 0.16 80)" }}>Member</span>
+              </p>
+              <p className="text-white/60 text-xs mt-0.5">You're enjoying all premium benefits.</p>
+            </div>
+            <button
+              className="px-4 py-2 rounded-xl text-xs font-bold flex-shrink-0"
+              style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
+              onClick={() => toast.info("Manage plan coming soon")}
+            >
+              Manage Plan
+            </button>
+          </div>
+        ) : showUpgradeNudge ? (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: "oklch(0.22 0.18 290)", border: "1px solid oklch(0.72 0.16 80 / 0.3)" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "oklch(0.72 0.16 80 / 0.15)" }}
+            >
+              <Crown className="w-5 h-5" style={{ color: "oklch(0.72 0.16 80)" }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-white text-sm">Upgrade to Premium</p>
+              <p className="text-white/60 text-xs mt-0.5">
+                You've unlocked a chat. Go Premium to enjoy unlimited connections!
+              </p>
+            </div>
+            <button
+              className="px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-60"
+              style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
+              disabled={upgradeToPremium.isPending}
+              onClick={() => upgradeToPremium.mutate({ confirm: true })}
+            >
+              {upgradeToPremium.isPending ? "..." : "Upgrade"}
+            </button>
+          </div>
+        ) : (
+          <div
+            className="rounded-2xl p-4 flex items-center gap-3"
+            style={{ background: "oklch(0.22 0.18 290)", border: "1px solid oklch(0.35 0.18 290)" }}
+          >
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: "oklch(0.35 0.18 290)" }}
+            >
+              <Crown className="w-5 h-5 text-white/50" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-white text-sm">Go Premium</p>
+              <p className="text-white/60 text-xs mt-0.5">Unlock unlimited chats and more features.</p>
+            </div>
+            <button
+              className="px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-60"
+              style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
+              disabled={upgradeToPremium.isPending}
+              onClick={() => upgradeToPremium.mutate({ confirm: true })}
+            >
+              {upgradeToPremium.isPending ? "..." : "Go Premium"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── My Photos ─────────────────────────────────────────── */}
+      <div className="mt-4 px-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-bold text-sm" style={{ color: "oklch(0.28 0.20 290)" }}>My Photos</p>
+          <button
+            className="text-xs font-semibold"
+            style={{ color: "oklch(0.45 0.18 290)" }}
+            onClick={() => addPhotoRef.current?.click()}
+          >
+            Add More
+          </button>
+          <input ref={addPhotoRef} type="file" accept="image/*" className="hidden" onChange={handleAddPhoto} />
+        </div>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          {/* Main photo */}
+          {user.photoUrl && (
+            <div className="relative flex-shrink-0 w-24 h-28 rounded-xl overflow-hidden">
+              <img src={user.photoUrl} alt="Main" className="w-full h-full object-cover" />
+              <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                Main
+              </div>
+            </div>
+          )}
+          {/* Extra photos */}
+          {myPhotos?.map((p) => (
+            <div key={p.id} className="flex-shrink-0 w-24 h-28 rounded-xl overflow-hidden">
+              <img src={p.photoUrl} alt="" className="w-full h-full object-cover" />
+            </div>
+          ))}
+          {/* Add photo slot */}
+          <button
+            onClick={() => addPhotoRef.current?.click()}
+            className="flex-shrink-0 w-24 h-28 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1"
+            style={{ borderColor: "oklch(0.72 0.16 80 / 0.5)", color: "oklch(0.45 0.18 290)" }}
+          >
+            <span className="text-2xl font-light leading-none">+</span>
+            <span className="text-[10px] font-medium">Add Photo</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Profile Completion ────────────────────────────────── */}
+      <div className="mt-4 mx-4 rounded-2xl bg-white p-4" style={{ border: "1px solid oklch(0.92 0.03 290)" }}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="font-bold text-sm" style={{ color: "oklch(0.28 0.20 290)" }}>Profile Completion</p>
+          <p className="font-bold text-sm" style={{ color: "oklch(0.45 0.18 290)" }}>{score}%</p>
+        </div>
+        <div className="h-2 rounded-full bg-gray-100 overflow-hidden mb-3">
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{ width: `${score}%`, background: "oklch(0.45 0.18 290)" }}
+          />
+        </div>
+        <button
+          onClick={() => navigate("/edit-profile")}
+          className="flex items-center gap-3 w-full"
+        >
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: "oklch(0.94 0.04 290)" }}
+          >
+            <Star className="w-4 h-4" style={{ color: "oklch(0.45 0.18 290)" }} />
+          </div>
+          <p className="text-sm text-gray-600 flex-1 text-left">
+            {score < 100 ? "Almost there! Complete your profile to get more matches." : "Your profile is complete!"}
+          </p>
+          <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        </button>
+      </div>
+
+      {/* ── Personal Details ──────────────────────────────────── */}
+      <div className="mt-5 px-4">
+        <p className="font-bold text-sm mb-2" style={{ color: "oklch(0.28 0.20 290)" }}>Personal Details</p>
+        <div className="rounded-2xl bg-white overflow-hidden" style={{ border: "1px solid oklch(0.92 0.03 290)" }}>
+          {[
+            {
+              icon: <PersonIcon className="w-4.5 h-4.5" />,
+              label: "Edit Personal Info",
+              sub: "Basic info, location, work, education",
+              onClick: () => navigate("/edit-profile"),
+            },
+            {
+              icon: <BookIcon className="w-4.5 h-4.5" />,
+              label: "My Faith & Values",
+              sub: "Faith, church, and what matters most",
+              onClick: () => { navigate("/edit-profile"); toast.info("Faith section in Edit Profile"); },
+            },
+            {
+              icon: <HeartHandIcon className="w-4.5 h-4.5" />,
+              label: "Relationship Preferences",
+              sub: "What you're looking for in a partner",
+              onClick: () => toast.info("Coming soon"),
+            },
+          ].map((item, i, arr) => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              className={`${menuItemClass} w-full ${i < arr.length - 1 ? "border-b border-gray-100" : ""}`}
+            >
+              <div className={iconWrapClass} style={{ background: "oklch(0.94 0.04 290)" }}>
+                <span style={{ color: "oklch(0.45 0.18 290)" }}>{item.icon}</span>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{item.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Account & Settings ────────────────────────────────── */}
+      <div className="mt-5 px-4">
+        <p className="font-bold text-sm mb-2" style={{ color: "oklch(0.28 0.20 290)" }}>Account &amp; Settings</p>
+        <div className="rounded-2xl bg-white overflow-hidden" style={{ border: "1px solid oklch(0.92 0.03 290)" }}>
+          {[
+            {
+              icon: <GearIcon className="w-4.5 h-4.5" />,
+              label: "Account Settings",
+              sub: "Email, password, notifications",
+              color: "oklch(0.45 0.18 290)",
+              bg: "oklch(0.94 0.04 290)",
+              onClick: () => toast.info("Account settings coming soon"),
+            },
+            {
+              icon: <ShieldIcon className="w-4.5 h-4.5" />,
+              label: "Privacy & Safety",
+              sub: "Manage privacy, block and report",
+              color: "oklch(0.45 0.18 290)",
+              bg: "oklch(0.94 0.04 290)",
+              onClick: () => toast.info("Privacy settings coming soon"),
+            },
+            {
+              icon: <HelpCircle className="w-4.5 h-4.5" />,
+              label: "Help & Support",
+              sub: "FAQs, contact support",
+              color: "oklch(0.45 0.18 290)",
+              bg: "oklch(0.94 0.04 290)",
+              onClick: () => toast.info("Help & Support coming soon"),
+            },
+            ...(user.role === "admin" ? [{
+              icon: <Shield className="w-4.5 h-4.5" />,
+              label: "Admin Panel",
+              sub: "Manage users and payments",
+              color: "oklch(0.45 0.18 290)",
+              bg: "oklch(0.94 0.04 290)",
+              onClick: () => navigate("/admin"),
+            }] : []),
+          ].map((item, i, arr) => (
+            <button
+              key={item.label}
+              onClick={item.onClick}
+              className={`${menuItemClass} w-full ${i < arr.length - 1 ? "border-b border-gray-100" : ""}`}
+            >
+              <div className={iconWrapClass} style={{ background: item.bg }}>
+                <span style={{ color: item.color }}>{item.icon}</span>
+              </div>
+              <div className="flex-1 text-left min-w-0">
+                <p className="text-sm font-semibold text-gray-800">{item.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
+            </button>
+          ))}
+
+          {/* Log Out — red accent */}
+          <button
+            onClick={onLogout}
+            className={`${menuItemClass} w-full border-t border-gray-100`}
+          >
+            <div className={iconWrapClass} style={{ background: "oklch(0.97 0.02 25)" }}>
+              <LogOut className="w-4.5 h-4.5" style={{ color: "oklch(0.55 0.20 25)" }} />
+            </div>
+            <div className="flex-1 text-left min-w-0">
+              <p className="text-sm font-semibold" style={{ color: "oklch(0.55 0.20 25)" }}>Log Out</p>
+              <p className="text-xs text-gray-400 mt-0.5">Sign out of your account</p>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div className="h-6" />
+    </div>
+  );
+}
+
+// ─── Main Browse Page ─────────────────────────────────────────────────────────
 export default function Browse() {
   const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
-  const [activeTab, setActiveTab] = useState<NavTab>("home");
+  const searchString = useSearch();
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
   const [filterLocation, setFilterLocation] = useState<string | undefined>();
-  const [showFilters, setShowFilters] = useState(false);
   const [offset, setOffset] = useState(0);
   const [cardIndex, setCardIndex] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
+  const [isBanned, setIsBanned] = useState(false);
+
+  // Derive active tab from URL query param
+  const tabParam = new URLSearchParams(searchString).get("tab") as NavTab | null;
+  const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom"];
+  const activeTab: NavTab = tabParam && validTabs.includes(tabParam) ? tabParam : "home";
+  const setActiveTab = (tab: NavTab) => navigate(tab === "home" ? "/browse" : `/browse?tab=${tab}`);
 
   const verseIndex = new Date().getDate() % DAILY_VERSES.length;
   const verse = DAILY_VERSES[verseIndex]!;
 
-  const { data: users, isLoading, refetch } = trpc.browse.list.useQuery(
+  const { data: browseUsers, isLoading, refetch, error: browseError } = trpc.browse.list.useQuery(
     { gender: filterGender, location: filterLocation, offset },
-    { enabled: !!isAuthenticated && !loading }
+    { enabled: !!isAuthenticated && !loading && !isBanned }
   );
+
+  // Detect banned user from browse query error
+  useEffect(() => {
+    if (browseError?.data?.code === "FORBIDDEN") {
+      setIsBanned(true);
+    }
+  }, [browseError]);
+
+  // Auth redirects via useEffect (not render-time)
+  useEffect(() => {
+    if (!loading && !isAuthenticated) navigate("/");
+  }, [loading, isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && user && !user.profileComplete) navigate("/setup");
+  }, [loading, isAuthenticated, user, navigate]);
 
   const handleLogout = async () => {
     await logout();
@@ -61,48 +509,65 @@ export default function Browse() {
 
   if (loading) {
     return (
-      <div className="min-h-screen hero-gradient flex items-center justify-center">
+      <div className="h-screen hero-gradient flex items-center justify-center">
         <div className="w-10 h-10 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!isAuthenticated) { navigate("/"); return null; }
-  if (user && !user.profileComplete) { navigate("/setup"); return null; }
+  if (!isAuthenticated || !user) return null;
+  if (!user.profileComplete) return null;
+
+  // Banned user screen
+  if (isBanned) {
+    return (
+      <div className="h-screen hero-gradient flex flex-col items-center justify-center px-6 text-center max-w-[480px] mx-auto">
+        <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center mb-4">
+          <Shield className="w-8 h-8 text-red-400" />
+        </div>
+        <h2 className="font-display font-bold text-white text-xl mb-2">Account Suspended</h2>
+        <p className="text-white/70 text-sm max-w-xs mb-6">
+          Your account has been suspended. Please contact support if you believe this is a mistake.
+        </p>
+        <button
+          onClick={handleLogout}
+          className="btn-gold px-8 py-3 text-sm font-bold"
+        >
+          Sign Out
+        </button>
+      </div>
+    );
+  }
 
   const firstName = user?.name?.split(" ")[0] ?? "Friend";
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-
-  const currentCard = users && users.length > 0 ? users[cardIndex % users.length] : null;
+  const currentCard = browseUsers && browseUsers.length > 0 ? browseUsers[cardIndex % browseUsers.length] : null;
 
   const handleSwipeNext = () => setCardIndex((i) => i + 1);
-  const handleSwipeLike = () => {
-    toast.success("Liked! ❤️");
-    setCardIndex((i) => i + 1);
-  };
+  const handleSwipeLike = () => { toast.success("Liked! ❤️"); setCardIndex((i) => i + 1); };
+  const handleUnlockChat = (userId: number) => { setSelectedUserId(userId); setShowPayment(true); };
 
-  const handleUnlockChat = (userId: number) => {
-    setSelectedUserId(userId);
-    setShowPayment(true);
-  };
-
-  // ── Render content for active tab ─────────────────────────
+  // ── Tab content renderer ──────────────────────────────────
   const renderContent = () => {
+    // ── PROFILE tab ──────────────────────────────────────────
+    if (activeTab === "profile") {
+      if (!user) return null;
+      return <ProfileTab user={user} onLogout={handleLogout} navigate={navigate} />;
+    }
+
+    // ── SWIPE tab ─────────────────────────────────────────────
     if (activeTab === "swipe") {
       return (
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <h2 className="font-display font-bold text-xl text-foreground mb-4">Discover Members</h2>
-          {/* Filter row */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+          <h2 className="font-display font-bold text-xl text-foreground mb-3">Discover Members</h2>
           <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
             {(["male", "female"] as const).map((g) => (
               <button
                 key={g}
                 onClick={() => setFilterGender(filterGender === g ? undefined : g)}
                 className={`px-4 py-2 rounded-full text-sm font-medium flex-shrink-0 transition-colors ${
-                  filterGender === g
-                    ? "bg-primary text-white"
-                    : "bg-secondary text-secondary-foreground border border-border"
+                  filterGender === g ? "bg-primary text-white" : "bg-white text-gray-600 border border-gray-200"
                 }`}
               >
                 {g === "male" ? "Men" : "Women"}
@@ -113,48 +578,37 @@ export default function Browse() {
                 key={loc}
                 onClick={() => setFilterLocation(filterLocation === loc ? undefined : loc)}
                 className={`px-4 py-2 rounded-full text-sm font-medium flex-shrink-0 transition-colors ${
-                  filterLocation === loc
-                    ? "bg-primary text-white"
-                    : "bg-secondary text-secondary-foreground border border-border"
+                  filterLocation === loc ? "bg-primary text-white" : "bg-white text-gray-600 border border-gray-200"
                 }`}
               >
                 {loc}
               </button>
             ))}
           </div>
-          {/* User grid */}
           {isLoading ? (
             <div className="grid grid-cols-2 gap-3">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="aspect-[3/4] rounded-2xl bg-muted animate-pulse" />
-              ))}
+              {[...Array(4)].map((_, i) => <div key={i} className="aspect-[3/4] rounded-2xl bg-gray-200 animate-pulse" />)}
             </div>
-          ) : !users || users.length === 0 ? (
+          ) : !browseUsers || browseUsers.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Users className="w-12 h-12 text-muted-foreground mb-3" />
-              <p className="font-semibold text-foreground">No members found</p>
-              <p className="text-muted-foreground text-sm mt-1">Be the first to join!</p>
+              <Users className="w-12 h-12 text-gray-300 mb-3" />
+              <p className="font-semibold text-gray-700">No members found</p>
+              <p className="text-gray-400 text-sm mt-1">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
-              {users.map((u) => (
-                <button
-                  key={u.id}
-                  onClick={() => navigate(`/profile/${u.id}`)}
-                  className="profile-card bg-card text-left"
-                >
-                  <div className="aspect-[3/4] bg-muted relative overflow-hidden">
+              {browseUsers.map((u) => (
+                <button key={u.id} onClick={() => navigate(`/profile/${u.id}`)} className="profile-card bg-white text-left">
+                  <div className="aspect-[3/4] bg-gray-100 relative overflow-hidden">
                     {u.photoUrl ? (
                       <img src={u.photoUrl} alt={u.name ?? ""} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-10 h-10 text-primary/30">
-                          <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                        </svg>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <PersonIcon className="w-10 h-10 text-gray-300" />
                       </div>
                     )}
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                      <p className="text-white font-semibold text-sm">{u.name ?? "Member"}, {u.age ?? "?"}</p>
+                      <p className="text-white font-semibold text-sm">{u.name ?? "Member"}{u.age ? `, ${u.age}` : ""}</p>
                       {u.church && <p className="text-white/70 text-xs truncate">{u.church}</p>}
                     </div>
                   </div>
@@ -162,11 +616,8 @@ export default function Browse() {
               ))}
             </div>
           )}
-          {users && users.length >= 10 && (
-            <button
-              onClick={() => setOffset((o) => o + 10)}
-              className="w-full mt-4 h-12 rounded-2xl border border-border text-sm font-medium text-primary"
-            >
+          {browseUsers && browseUsers.length >= 20 && (
+            <button onClick={() => setOffset((o) => o + 20)} className="w-full mt-4 h-12 rounded-2xl border border-gray-200 text-sm font-medium text-primary">
               Load more
             </button>
           )}
@@ -174,83 +625,33 @@ export default function Browse() {
       );
     }
 
+    // ── CHAT tab ──────────────────────────────────────────────
     if (activeTab === "chat") {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center pb-24">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <MessageCircle className="w-8 h-8 text-primary" />
           </div>
           <h3 className="font-display font-bold text-xl text-foreground">Your Chats</h3>
-          <p className="text-muted-foreground text-sm mt-2 max-w-xs">
-            Unlock a chat by visiting a member's profile and paying K15 to start a conversation.
+          <p className="text-gray-500 text-sm mt-2 max-w-xs">
+            Unlock a chat by visiting a member's profile and paying K10 to start a conversation.
           </p>
-          <button
-            onClick={() => setActiveTab("swipe")}
-            className="btn-purple mt-6 px-8 py-3 text-sm"
-          >
+          <button onClick={() => setActiveTab("swipe")} className="btn-purple mt-6 px-8 py-3 text-sm">
             Browse Members
           </button>
         </div>
       );
     }
 
-    if (activeTab === "profile") {
-      return (
-        <div className="flex-1 overflow-y-auto px-4 py-4">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-16 h-16 rounded-full bg-primary/10 overflow-hidden flex items-center justify-center">
-              {user?.photoUrl ? (
-                <img src={user.photoUrl} alt={user.name ?? ""} className="w-full h-full object-cover" />
-              ) : (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-8 h-8 text-primary/40">
-                  <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                </svg>
-              )}
-            </div>
-            <div>
-              <p className="font-bold text-foreground text-lg">{user?.name ?? "Your Name"}</p>
-              <p className="text-muted-foreground text-sm">{(user as any)?.church ?? "Add your church"}</p>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <button
-              onClick={() => navigate("/edit-profile")}
-              className="w-full h-14 rounded-2xl border border-border bg-white flex items-center px-4 gap-3 text-sm font-medium text-foreground"
-            >
-              <Settings className="w-5 h-5 text-primary" />
-              Edit Profile
-            </button>
-            {user?.role === "admin" && (
-              <button
-                onClick={() => navigate("/admin")}
-                className="w-full h-14 rounded-2xl border border-border bg-white flex items-center px-4 gap-3 text-sm font-medium text-foreground"
-              >
-                <Shield className="w-5 h-5 text-primary" />
-                Admin Panel
-              </button>
-            )}
-            <button
-              onClick={handleLogout}
-              className="w-full h-14 rounded-2xl border border-destructive/30 bg-white flex items-center px-4 gap-3 text-sm font-medium text-destructive"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
-              </svg>
-              Sign Out
-            </button>
-          </div>
-        </div>
-      );
-    }
-
+    // ── CHATROOM tab ──────────────────────────────────────────
     if (activeTab === "chatroom") {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center pb-24">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <Users className="w-8 h-8 text-primary" />
           </div>
           <h3 className="font-display font-bold text-xl text-foreground">Community Chatroom</h3>
-          <p className="text-muted-foreground text-sm mt-2 max-w-xs">
+          <p className="text-gray-500 text-sm mt-2 max-w-xs">
             Group discussions for the Faithful Hearts community — coming soon for Premium members.
           </p>
           <div className="badge-premium mt-4 inline-flex items-center gap-1.5">
@@ -263,157 +664,114 @@ export default function Browse() {
 
     // ── HOME tab (default) ────────────────────────────────────
     return (
-      <div className="flex-1 overflow-y-auto">
-        {/* Greeting */}
-        <div className="hero-gradient px-5 pt-5 pb-6">
-          <div className="flex items-center justify-between mb-1">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Greeting strip */}
+        <div className="hero-gradient px-5 pt-4 pb-5 flex-shrink-0">
+          <div className="flex items-center justify-between">
             <div>
-              <p className="text-white font-bold text-lg">
+              <p className="text-white font-bold text-base">
                 {greeting}, {firstName}! ✨
               </p>
-              <p className="text-white/70 text-sm">Let your faith guide your heart.</p>
+              <p className="text-white/70 text-xs">Let your faith guide your heart.</p>
             </div>
             <button className="btn-gold flex items-center gap-1.5 px-3 py-2 text-xs">
-              <Crown className="w-3.5 h-3.5" />
+              <Crown className="w-3 h-3" />
               Go Premium
             </button>
           </div>
         </div>
 
-        <div className="px-4 -mt-3 space-y-4 pb-6">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 space-y-3">
           {/* Profile swipe card */}
           {isLoading ? (
-            <div className="profile-card bg-muted h-80 animate-pulse" />
+            <div className="profile-card bg-gray-200 h-64 animate-pulse" />
           ) : currentCard ? (
-            <div className="profile-card relative">
-              {/* Photo */}
-              <div className="relative h-80 bg-muted">
+            <div className="profile-card relative overflow-hidden">
+              <div className="relative h-64 bg-gray-100">
                 {currentCard.photoUrl ? (
-                  <img
-                    src={currentCard.photoUrl}
-                    alt={currentCard.name ?? "Member"}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+                  <img src={currentCard.photoUrl} alt={currentCard.name ?? "Member"} className="w-full h-full object-cover" loading="lazy" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-16 h-16 text-primary/30">
-                      <circle cx="12" cy="8" r="4" /><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                    </svg>
+                    <PersonIcon className="w-16 h-16 text-primary/30" />
                   </div>
                 )}
-
-                {/* New badge */}
-                <div className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full">
-                  New
-                </div>
-
-                {/* Like button top-right */}
-                <button
-                  onClick={handleSwipeLike}
-                  className="absolute top-3 right-3 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md"
-                >
-                  <Heart className="w-5 h-5 text-primary" />
+                <div className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full">New</div>
+                <button onClick={handleSwipeLike} className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md">
+                  <Heart className="w-4.5 h-4.5 text-primary" />
                 </button>
-
-                {/* Name overlay */}
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pt-8 pb-3">
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pt-6 pb-3">
                   <div className="flex items-center gap-1.5">
-                    <p className="text-white font-bold text-xl">{currentCard.name ?? "Member"}, {currentCard.age ?? "?"}</p>
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-blue-400 flex-shrink-0">
+                    <p className="text-white font-bold text-lg">{currentCard.name ?? "Member"}{currentCard.age ? `, ${currentCard.age}` : ""}</p>
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-blue-400 flex-shrink-0">
                       <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  {currentCard.church && (
-                    <p className="text-white/80 text-sm">{currentCard.church}</p>
-                  )}
+                  {currentCard.church && <p className="text-white/80 text-xs">{currentCard.church}</p>}
                   {currentCard.location && (
-                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                      <MapPin className="w-3.5 h-3.5 text-white/60" />
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <MapPin className="w-3 h-3 text-white/60" />
                       <span className="text-white/70 text-xs">{currentCard.location}</span>
-                      <span className="text-white/50 text-xs">+</span>
-                      <span className="text-white/70 text-xs">Christian</span>
-                      <span className="text-white/50 text-xs">+</span>
-                      <span className="text-white/70 text-xs">Looking for a God-centred partner</span>
                     </div>
                   )}
                 </div>
               </div>
-
               {/* Action buttons */}
-              <div className="flex items-center justify-center gap-6 py-4 bg-white">
-                <button
-                  onClick={handleSwipeNext}
-                  className="w-14 h-14 rounded-full border-2 border-muted flex items-center justify-center shadow-sm"
-                >
-                  <X className="w-6 h-6 text-muted-foreground" />
+              <div className="flex items-center justify-center gap-6 py-3 bg-white">
+                <button onClick={handleSwipeNext} className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center shadow-sm">
+                  <X className="w-5 h-5 text-gray-400" />
                 </button>
-                <button
-                  onClick={handleSwipeLike}
-                  className="w-14 h-14 rounded-full flex items-center justify-center shadow-md"
-                  style={{ background: "oklch(0.28 0.20 290)" }}
-                >
-                  <Heart className="w-6 h-6 text-white fill-white" />
+                <button onClick={handleSwipeLike} className="w-12 h-12 rounded-full flex items-center justify-center shadow-md" style={{ background: "oklch(0.28 0.20 290)" }}>
+                  <Heart className="w-5 h-5 text-white fill-white" />
                 </button>
               </div>
-
-              {/* Unlock chat banner */}
+              {/* Unlock banner */}
               <button
                 onClick={() => handleUnlockChat(currentCard.id)}
-                className="w-full flex items-center justify-center gap-2 py-3.5 text-white text-sm font-semibold"
+                className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold"
                 style={{ background: "oklch(0.28 0.20 290)" }}
               >
                 <Lock className="w-4 h-4" />
-                Pay <span className="text-gold font-bold">K15</span> to permanently unlock chat with {currentCard.name?.split(" ")[0] ?? "them"}
+                Pay <span style={{ color: "oklch(0.72 0.16 80)" }} className="font-bold mx-0.5">K10</span> to permanently unlock chat with {currentCard.name?.split(" ")[0] ?? "them"}
               </button>
             </div>
           ) : (
-            <div className="profile-card bg-white flex flex-col items-center justify-center py-16 text-center px-6">
-              <Users className="w-12 h-12 text-muted-foreground mb-3" />
-              <p className="font-semibold text-foreground">No members found</p>
-              <p className="text-muted-foreground text-sm mt-1">Be the first to join!</p>
-              <button onClick={() => refetch()} className="mt-4 flex items-center gap-2 text-primary text-sm font-medium">
+            <div className="profile-card bg-white flex flex-col items-center justify-center py-12 text-center px-6">
+              <Users className="w-10 h-10 text-gray-300 mb-3" />
+              <p className="font-semibold text-gray-700">No members found</p>
+              <p className="text-gray-400 text-sm mt-1">Be the first to join!</p>
+              <button onClick={() => refetch()} className="mt-3 flex items-center gap-2 text-primary text-sm font-medium">
                 <RefreshCw className="w-4 h-4" /> Refresh
               </button>
             </div>
           )}
 
-          {/* Premium upsell card */}
-          <div
-            className="rounded-2xl p-4 flex items-center gap-3"
-            style={{ background: "oklch(0.96 0.02 290)", border: "1px solid oklch(0.88 0.04 290)" }}
-          >
+          {/* Premium upsell */}
+          <div className="rounded-2xl p-4 flex items-center gap-3 bg-white" style={{ border: "1px solid oklch(0.92 0.03 290)" }}>
             <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.28 0.20 290)" }}>
               <Crown className="w-5 h-5 text-yellow-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-foreground text-sm">Premium Members Unlock More</p>
-              <p className="text-muted-foreground text-xs mt-0.5">Like, match, and start meaningful conversations. Upgrade now to connect.</p>
+              <p className="font-bold text-gray-800 text-sm">Premium Members Unlock More</p>
+              <p className="text-gray-400 text-xs mt-0.5">Like, match, and start meaningful conversations.</p>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-muted-foreground flex-shrink-0">
-              <path d="M9 18l6-6-6-6" />
-            </svg>
+            <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
           </div>
 
-          {/* Community Spotlight / Daily Verse */}
+          {/* Daily Verse */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <p className="font-bold text-foreground">Community Spotlight</p>
-              <button className="text-primary text-sm font-medium">View All</button>
+            <div className="flex items-center justify-between mb-2">
+              <p className="font-bold text-gray-800 text-sm">Community Spotlight</p>
+              <button className="text-primary text-xs font-medium">View All</button>
             </div>
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ background: "linear-gradient(135deg, oklch(0.55 0.10 60) 0%, oklch(0.45 0.12 55) 100%)" }}
-            >
+            <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, oklch(0.55 0.10 60) 0%, oklch(0.45 0.12 55) 100%)" }}>
               <div className="p-4 flex gap-3">
                 <div className="flex-1">
                   <p className="text-white font-bold text-sm mb-1">Daily Verse</p>
-                  <p className="text-white/90 text-sm italic leading-relaxed">
-                    "{verse.text}"
-                  </p>
-                  <p className="text-white/70 text-xs mt-2">— {verse.ref}</p>
+                  <p className="text-white/90 text-sm italic leading-relaxed">"{verse.text}"</p>
+                  <p className="text-white/70 text-xs mt-1.5">— {verse.ref}</p>
                 </div>
-                <div className="w-16 flex items-center justify-center opacity-30">
+                <div className="w-12 flex items-center justify-center opacity-25">
                   <svg viewBox="0 0 40 60" fill="none" className="w-full">
                     <line x1="20" y1="2" x2="20" y2="58" stroke="white" strokeWidth="3" strokeLinecap="round" />
                     <line x1="8" y1="16" x2="32" y2="16" stroke="white" strokeWidth="3" strokeLinecap="round" />
@@ -428,28 +786,23 @@ export default function Browse() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-[480px] mx-auto">
+    <div className="h-screen bg-background flex flex-col max-w-[480px] mx-auto overflow-hidden">
       {/* Top header */}
-      <header className="hero-gradient px-4 pt-4 pb-3 flex items-center justify-between flex-shrink-0">
-        <button
-          onClick={() => setActiveTab("home")}
-          className="w-9 h-9 flex items-center justify-center rounded-lg"
-        >
+      <header className="hero-gradient px-4 pt-3 pb-3 flex items-center justify-between flex-shrink-0">
+        <button onClick={() => setActiveTab("home")} className="w-9 h-9 flex items-center justify-center rounded-lg">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-5 h-5">
             <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-
         <div className="flex items-center gap-2">
           <img src={LOGO_URL} alt="" className="w-7 h-7 rounded-lg object-cover" />
           <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
         </div>
-
         <div className="relative">
           <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10">
             <Bell className="w-5 h-5 text-white" />
           </button>
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 text-primary text-[10px] font-bold rounded-full flex items-center justify-center">3</span>
+          <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-primary text-[9px] font-bold rounded-full flex items-center justify-center">3</span>
         </div>
       </header>
 
@@ -458,19 +811,16 @@ export default function Browse() {
         {renderContent()}
       </div>
 
-      {/* 5-tab bottom nav */}
-      <BottomNav active={activeTab} />
+      {/* Bottom nav */}
+      <BottomNav active={activeTab} onTabChange={setActiveTab} />
 
       {/* Payment modal */}
       {showPayment && selectedUserId && (
         <PaymentModal
           targetId={selectedUserId}
-          targetName={users?.find((u) => u.id === selectedUserId)?.name ?? "this member"}
+          targetName={browseUsers?.find((u) => u.id === selectedUserId)?.name ?? "this member"}
           onClose={() => setShowPayment(false)}
-          onSuccess={() => {
-            setShowPayment(false);
-            navigate(`/chat/${selectedUserId}`);
-          }}
+          onSuccess={() => { setShowPayment(false); navigate(`/chat/${selectedUserId}`); }}
         />
       )}
     </div>
