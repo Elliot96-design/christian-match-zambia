@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import PaymentModal from "@/components/PaymentModal";
+import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
 
 const DAILY_VERSES = [
@@ -54,10 +55,11 @@ const GearIcon = ({ className }: { className?: string }) => (
 );
 
 // ─── Profile Tab Component ────────────────────────────────────────────────────
-function ProfileTab({ user, onLogout, navigate }: {
+function ProfileTab({ user, onLogout, navigate, onTabChange }: {
   user: NonNullable<ReturnType<typeof useAuth>["user"]>;
   onLogout: () => void;
   navigate: (path: string) => void;
+  onTabChange: (tab: NavTab) => void;
 }) {
   const utils = trpc.useUtils();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -91,6 +93,8 @@ function ProfileTab({ user, onLogout, navigate }: {
     },
     onError: (e) => toast.error(e.message),
   });
+
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -240,9 +244,9 @@ function ProfileTab({ user, onLogout, navigate }: {
               className="px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-60"
               style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
               disabled={upgradeToPremium.isPending}
-              onClick={() => upgradeToPremium.mutate({ confirm: true })}
+              onClick={() => setShowPremiumModal(true)}
             >
-              {upgradeToPremium.isPending ? "..." : "Upgrade"}
+              Upgrade
             </button>
           </div>
         ) : (
@@ -264,9 +268,9 @@ function ProfileTab({ user, onLogout, navigate }: {
               className="px-3 py-2 rounded-xl text-xs font-bold flex-shrink-0 disabled:opacity-60"
               style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
               disabled={upgradeToPremium.isPending}
-              onClick={() => upgradeToPremium.mutate({ confirm: true })}
+              onClick={() => setShowPremiumModal(true)}
             >
-              {upgradeToPremium.isPending ? "..." : "Go Premium"}
+              Go Premium
             </button>
           </div>
         )}
@@ -352,18 +356,23 @@ function ProfileTab({ user, onLogout, navigate }: {
               label: "Edit Personal Info",
               sub: "Basic info, location, work, education",
               onClick: () => navigate("/edit-profile"),
+              // Show red dot if name, age, gender, or location is missing
+              incomplete: !user.name || !user.age || !user.gender || !user.location,
             },
             {
               icon: <BookIcon className="w-4.5 h-4.5" />,
               label: "My Faith & Values",
               sub: "Faith, church, and what matters most",
-              onClick: () => { navigate("/edit-profile"); toast.info("Faith section in Edit Profile"); },
+              onClick: () => { navigate("/edit-profile"); toast.info("Update your church in Edit Profile"); },
+              // Show red dot if church is missing
+              incomplete: !user.church,
             },
             {
               icon: <HeartHandIcon className="w-4.5 h-4.5" />,
               label: "Relationship Preferences",
               sub: "What you're looking for in a partner",
-              onClick: () => toast.info("Coming soon"),
+              onClick: () => toast.info("Relationship preferences coming soon"),
+              incomplete: false,
             },
           ].map((item, i, arr) => (
             <button
@@ -375,7 +384,16 @@ function ProfileTab({ user, onLogout, navigate }: {
                 <span style={{ color: "oklch(0.45 0.18 290)" }}>{item.icon}</span>
               </div>
               <div className="flex-1 text-left min-w-0">
-                <p className="text-sm font-semibold text-gray-800">{item.label}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold text-gray-800">{item.label}</p>
+                  {item.incomplete && (
+                    <span
+                      className="w-2 h-2 rounded-full flex-shrink-0"
+                      style={{ background: "oklch(0.60 0.22 25)" }}
+                      title="Incomplete"
+                    />
+                  )}
+                </div>
                 <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-300 flex-shrink-0" />
@@ -455,13 +473,121 @@ function ProfileTab({ user, onLogout, navigate }: {
       </div>
 
       <div className="h-6" />
+
+      {/* Premium Checkout Modal */}
+      {showPremiumModal && (
+        <PremiumCheckoutModal
+          onClose={() => setShowPremiumModal(false)}
+          onSuccess={() => {
+            setShowPremiumModal(false);
+            utils.profile.premiumStatus.invalidate();
+            utils.auth.me.invalidate();
+            toast.success("Welcome to Premium! 🎉");
+          }}
+        />
+      )}
     </div>
   );
 }
 
-// ─── Main Browse Page ─────────────────────────────────────────────────────────
-export default function Browse() {
-  const { user, loading, isAuthenticated, logout } = useAuth();
+// ─── Chat Tab Component ───────────────────────────────────────────────────────────────
+function ChatTab({ onBrowse, navigate }: { onBrowse: () => void; navigate: (path: string) => void }) {
+  const { data: chats, isLoading } = trpc.chat.myUnlocked.useQuery();
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 p-3 mb-2 rounded-2xl bg-white animate-pulse">
+            <div className="w-12 h-12 rounded-full bg-gray-200 flex-shrink-0" />
+            <div className="flex-1">
+              <div className="h-3 bg-gray-200 rounded w-1/2 mb-2" />
+              <div className="h-2.5 bg-gray-100 rounded w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (!chats || chats.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center pb-24">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+          <MessageCircle className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="font-display font-bold text-xl text-foreground">No Chats Yet</h3>
+        <p className="text-gray-500 text-sm mt-2 max-w-xs">
+          Browse members and pay K10 to unlock a private conversation with someone you like.
+        </p>
+        <button onClick={onBrowse} className="btn-purple mt-6 px-8 py-3 text-sm">
+          Browse Members
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto pb-24">
+      {/* Header */}
+      <div className="hero-gradient px-5 pt-4 pb-4 flex-shrink-0">
+        <p className="text-white font-bold text-base">Your Conversations</p>
+        <p className="text-white/70 text-xs">{chats.length} unlocked chat{chats.length !== 1 ? "s" : ""}</p>
+      </div>
+
+      <div className="px-4 pt-3 space-y-2">
+        {chats.map((chat) => (
+          <button
+            key={chat.targetId}
+            onClick={() => navigate(`/chat/${chat.targetId}`)}
+            className="w-full flex items-center gap-3 p-3.5 rounded-2xl bg-white text-left transition-all active:scale-[0.98]"
+            style={{ border: "1px solid oklch(0.92 0.03 290)" }}
+          >
+            {/* Avatar */}
+            <div
+              className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center"
+              style={{ background: "oklch(0.94 0.04 290)" }}
+            >
+              {chat.targetPhotoUrl ? (
+                <img src={chat.targetPhotoUrl} alt={chat.targetName ?? ""} className="w-full h-full object-cover" loading="lazy" />
+              ) : (
+                <PersonIcon className="w-6 h-6 text-purple-400" />
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm text-gray-800 truncate">
+                {chat.targetName ?? "Member"}{chat.targetAge ? `, ${chat.targetAge}` : ""}
+              </p>
+              {chat.targetChurch && (
+                <p className="text-xs text-gray-400 truncate mt-0.5">{chat.targetChurch}</p>
+              )}
+              <div className="flex items-center gap-2 mt-0.5">
+                <p className="text-xs" style={{ color: "oklch(0.55 0.18 290)" }}>Tap to open chat</p>
+                <span className="text-gray-300 text-xs">·</span>
+                <p className="text-xs text-gray-400">
+                  {new Date(chat.unlockedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </p>
+              </div>
+            </div>
+
+            {/* Unlocked badge */}
+            <div
+              className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center"
+              style={{ background: "oklch(0.94 0.04 290)" }}
+            >
+              <MessageCircle className="w-4 h-4" style={{ color: "oklch(0.45 0.18 290)" }} />
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Browse Page ─────────────────────────────────────────────────────────────────
+export default function Browse() {  const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
@@ -553,7 +679,7 @@ export default function Browse() {
     // ── PROFILE tab ──────────────────────────────────────────
     if (activeTab === "profile") {
       if (!user) return null;
-      return <ProfileTab user={user} onLogout={handleLogout} navigate={navigate} />;
+      return <ProfileTab user={user} onLogout={handleLogout} navigate={navigate} onTabChange={setActiveTab} />;
     }
 
     // ── SWIPE tab ─────────────────────────────────────────────
@@ -625,22 +751,9 @@ export default function Browse() {
       );
     }
 
-    // ── CHAT tab ──────────────────────────────────────────────
+    // ── CHAT tab ────────────────────────────────────────────────────
     if (activeTab === "chat") {
-      return (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center pb-24">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <MessageCircle className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="font-display font-bold text-xl text-foreground">Your Chats</h3>
-          <p className="text-gray-500 text-sm mt-2 max-w-xs">
-            Unlock a chat by visiting a member's profile and paying K10 to start a conversation.
-          </p>
-          <button onClick={() => setActiveTab("swipe")} className="btn-purple mt-6 px-8 py-3 text-sm">
-            Browse Members
-          </button>
-        </div>
-      );
+      return <ChatTab onBrowse={() => setActiveTab("swipe")} navigate={navigate} />;
     }
 
     // ── CHATROOM tab ──────────────────────────────────────────

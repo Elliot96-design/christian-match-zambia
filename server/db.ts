@@ -272,6 +272,55 @@ export async function getAllPayments(): Promise<(ChatUnlock & { payerName: strin
   return rows as (ChatUnlock & { payerName: string | null; targetName: string | null })[];
 }
 
+// ─── Unlocked Chats List ─────────────────────────────────────────────────────
+
+export async function getMyUnlockedChats(
+  userId: number
+): Promise<{ targetId: number; targetName: string | null; targetPhotoUrl: string | null; targetChurch: string | null; targetAge: number | null; unlockedAt: Date }[]> {
+  const db = await getDb();
+  if (!db) return [];
+  // Get all completed unlocks where the current user is the payer
+  const rows = await db
+    .select({
+      targetId: chatUnlocks.targetId,
+      targetName: sql<string>`u.name`,
+      targetPhotoUrl: sql<string>`u.photoUrl`,
+      targetChurch: sql<string>`u.church`,
+      targetAge: sql<number>`u.age`,
+      unlockedAt: chatUnlocks.createdAt,
+    })
+    .from(chatUnlocks)
+    .leftJoin(sql`users u`, sql`u.id = ${chatUnlocks.targetId}`)
+    .where(
+      and(
+        eq(chatUnlocks.payerId, userId),
+        eq(chatUnlocks.status, "completed")
+      )
+    )
+    .orderBy(desc(chatUnlocks.createdAt));
+  return rows as { targetId: number; targetName: string | null; targetPhotoUrl: string | null; targetChurch: string | null; targetAge: number | null; unlockedAt: Date }[];
+}
+
+// ─── Premium Payments ─────────────────────────────────────────────────────────
+
+export async function createPremiumPayment(data: {
+  payerId: number;
+  amount: number;
+  provider: string;
+}): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  // We reuse chatUnlocks table with targetId = 0 to represent a premium subscription payment
+  const result = await db.insert(chatUnlocks).values({
+    payerId: data.payerId,
+    targetId: 0, // sentinel: 0 = premium subscription
+    amount: data.amount,
+    provider: data.provider as "mtn" | "airtel" | "mock",
+    status: "pending",
+  });
+  return (result[0] as { insertId: number }).insertId;
+}
+
 // ─── Messages ─────────────────────────────────────────────────────────────────
 
 export function buildRoomId(a: number, b: number): string {

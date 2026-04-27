@@ -87,3 +87,15 @@
 - [x] Verify all routing flows: login → profile setup → browse → profile view → payment → chat
 - [x] Ensure banned users are redirected correctly
 - [x] Ensure admin route is protected
+
+## Next Steps (Phase 3 Continuation)
+- [x] Add payment.initiatePremium procedure (K50/month, MTN/Airtel modal)
+- [x] Add payment.confirmPremium procedure (marks isPremium=true on success)
+- [x] Create PremiumCheckoutModal component reusing MTN/Airtel provider selection
+- [x] Wire Go Premium / Upgrade buttons to PremiumCheckoutModal
+- [x] Add chat.myUnlocked query returning all unlocked conversation partners
+- [x] Build Chat tab UI: conversation list with avatar, name, last message placeholder, timestamp
+- [x] Add empty state for Chat tab when no unlocked chats yet
+- [x] Add missing-field indicators (dot/badge) in Personal Details section of Profile tab
+- [x] Highlight incomplete fields in Edit Personal Info, My Faith & Values, Relationship Preferences rows
+- [x] Update profile completion score to reflect newly filled fields in real time

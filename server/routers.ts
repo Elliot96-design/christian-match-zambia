@@ -12,11 +12,13 @@ import {
   completeChatUnlock,
   countUserPhotos,
   createChatUnlock,
+  createPremiumPayment,
   getAllPayments,
   getAllUsers,
   getChatUnlock,
   getDistinctLocations,
   getMessages,
+  getMyUnlockedChats,
   getPendingUnlockById,
   getUserById,
   getUserPhotos,
@@ -205,6 +207,11 @@ export const appRouter = router({
 
   // ─── Chat ─────────────────────────────────────────────────────────────────
   chat: router({
+    // List all users the current user has unlocked chat with
+    myUnlocked: protectedProcedure.query(async ({ ctx }) => {
+      return getMyUnlockedChats(ctx.user.id);
+    }),
+
     checkUnlock: protectedProcedure
       .input(z.object({ targetId: z.number().int() }))
       .query(async ({ ctx, input }) => {
@@ -215,7 +222,6 @@ export const appRouter = router({
     messages: protectedProcedure
       .input(z.object({ targetId: z.number().int() }))
       .query(async ({ ctx, input }) => {
-        // Server-side enforcement
         const unlock = await getChatUnlock(ctx.user.id, input.targetId);
         if (!unlock)
           throw new TRPCError({
@@ -224,31 +230,47 @@ export const appRouter = router({
           });
         const roomId = buildRoomId(ctx.user.id, input.targetId);
         const msgs = await getMessages(roomId, 50);
-        return msgs.reverse(); // oldest first
+        return msgs.reverse();
       }),
 
     send: protectedProcedure
       .input(z.object({ targetId: z.number().int(), content: z.string().min(1).max(1000) }))
       .mutation(async ({ ctx, input }) => {
-        // Server-side enforcement
         const unlock = await getChatUnlock(ctx.user.id, input.targetId);
         if (!unlock)
-          throw new TRPCError({
-            code: "FORBIDDEN",
-            message: "Chat not unlocked.",
-          });
+          throw new TRPCError({ code: "FORBIDDEN", message: "Chat not unlocked." });
         const roomId = buildRoomId(ctx.user.id, input.targetId);
-        const msg = await sendMessage({
-          roomId,
-          senderId: ctx.user.id,
-          content: input.content,
-        });
+        const msg = await sendMessage({ roomId, senderId: ctx.user.id, content: input.content });
         return msg;
       }),
   }),
 
   // ─── Payments ─────────────────────────────────────────────────────────────
   payment: router({
+    // Initiate a premium subscription payment (K50)
+    initiatePremium: protectedProcedure
+      .input(z.object({ provider: z.enum(["mtn", "airtel", "mock"]), phone: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
+        if (ctx.user.isPremium) throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
+        const id = await createPremiumPayment({ payerId: ctx.user.id, amount: 50, provider: input.provider });
+        return { paymentId: id, amount: 50, provider: input.provider };
+      }),
+
+    // Confirm a premium subscription payment and activate premium
+    confirmPremium: protectedProcedure
+      .input(z.object({ paymentId: z.number().int(), mockReference: z.string().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const unlock = await getPendingUnlockById(input.paymentId, ctx.user.id);
+        if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Payment not found or not yours." });
+        if (unlock.status === "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Already completed." });
+        const reference = input.mockReference ?? `PREM-${nanoid(12).toUpperCase()}`;
+        await completeChatUnlock(input.paymentId, reference);
+        await setUserPremium(ctx.user.id, true);
+        return { success: true, reference };
+      }),
+
+    // Initiate a single-chat unlock payment (K10)
     initiate: protectedProcedure
       .input(
         z.object({
@@ -258,18 +280,11 @@ export const appRouter = router({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        if (ctx.user.isBanned)
-          throw new TRPCError({ code: "FORBIDDEN" });
-
-        // Prevent duplicate payment
+        if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         const existing = await getChatUnlock(ctx.user.id, input.targetId);
-        if (existing)
-          throw new TRPCError({ code: "BAD_REQUEST", message: "Chat already unlocked." });
-
+        if (existing) throw new TRPCError({ code: "BAD_REQUEST", message: "Chat already unlocked." });
         const target = await getUserById(input.targetId);
-        if (!target || target.isBanned)
-          throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
-
+        if (!target || target.isBanned) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
         const id = await createChatUnlock({
           payerId: ctx.user.id,
           targetId: input.targetId,
@@ -277,24 +292,16 @@ export const appRouter = router({
           provider: input.provider,
           status: "pending",
         });
-
         return { paymentId: id, amount: 10, provider: input.provider };
       }),
 
+    // Confirm a single-chat unlock payment
     confirm: protectedProcedure
-      .input(
-        z.object({
-          paymentId: z.number().int(),
-          // In production this would be a real transaction reference
-          mockReference: z.string().optional(),
-        })
-      )
+      .input(z.object({ paymentId: z.number().int(), mockReference: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
-        // Verify the payment belongs to the current user (server-side ownership check)
         const unlock = await getPendingUnlockById(input.paymentId, ctx.user.id);
         if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Payment not found or not yours." });
         if (unlock.status === "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Already completed." });
-        // Mock: always succeed for now
         const reference = input.mockReference ?? `MOCK-${nanoid(12).toUpperCase()}`;
         await completeChatUnlock(input.paymentId, reference);
         return { success: true, reference };
