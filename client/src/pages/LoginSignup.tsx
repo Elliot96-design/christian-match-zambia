@@ -3,6 +3,7 @@ import { getLoginUrl } from "@/const";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
+import { LOGO_URL } from "@/components/AppHeader";
 
 export default function LoginSignup() {
   const { isAuthenticated, loading } = useAuth();
@@ -40,17 +41,8 @@ export default function LoginSignup() {
 
       {/* Logo + brand */}
       <div className="flex flex-col items-center pt-3 pb-1 px-5 flex-shrink-0">
-        <div className="w-14 h-14 mb-2 flex items-center justify-center">
-          <svg viewBox="0 0 80 80" fill="none" className="w-full h-full">
-            <path
-              d="M40 68 C40 68 8 48 8 26 C8 16 16 8 26 8 C32 8 38 12 40 16 C42 12 48 8 54 8 C64 8 72 16 72 26 C72 48 40 68 40 68Z"
-              fill="none"
-              stroke="oklch(0.28 0.20 290)"
-              strokeWidth="3"
-            />
-            <line x1="40" y1="14" x2="40" y2="44" stroke="oklch(0.72 0.16 80)" strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="28" y1="24" x2="52" y2="24" stroke="oklch(0.72 0.16 80)" strokeWidth="3.5" strokeLinecap="round" />
-          </svg>
+        <div className="w-16 h-16 mb-2 flex items-center justify-center">
+          <img src={LOGO_URL} alt="Faithful Hearts" className="w-full h-full rounded-2xl object-cover shadow-lg" />
         </div>
         <h1 className="font-display font-bold text-xl text-primary">Faithful Hearts</h1>
         <p className="text-muted-foreground text-xs mt-0.5">Love. Faith. Purpose.</p>

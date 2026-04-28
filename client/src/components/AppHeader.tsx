@@ -3,7 +3,7 @@ import { ArrowLeft, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-export const LOGO_URL = "/manus-storage/christian-match-zambia-logo_64611587.jpg";
+export const LOGO_URL = "/manus-storage/faithful-hearts-logo_b31fd195.png";
 
 interface AppHeaderProps {
   /** Show a back arrow that navigates to this path */
