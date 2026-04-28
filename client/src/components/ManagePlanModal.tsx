@@ -16,7 +16,7 @@ export default function ManagePlanModal({ onClose, onCancelled }: ManagePlanModa
 
   const cancelPremium = trpc.profile.cancelPremium.useMutation({
     onSuccess: () => {
-      toast.success("Premium cancelled. You'll retain access until your renewal date.");
+      toast.success("Premium cancelled. Your benefits have been removed.");
       utils.profile.getPlanDetails.invalidate();
       utils.profile.premiumStatus.invalidate();
       utils.auth.me.invalidate();
@@ -179,7 +179,7 @@ export default function ManagePlanModal({ onClose, onCancelled }: ManagePlanModa
                       Cancel Premium?
                     </p>
                     <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
-                      You will lose all premium benefits immediately. This action cannot be undone.
+                      Your premium benefits will be removed immediately. You can re-subscribe at any time.
                     </p>
                   </div>
                 </div>

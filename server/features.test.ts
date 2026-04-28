@@ -20,6 +20,12 @@ vi.mock("./db", () => ({
   updateUserProfile: vi.fn(),
   upsertUser: vi.fn(),
   getUserByOpenId: vi.fn(),
+  setUserPremium: vi.fn(),
+  hasAnyCompletedUnlock: vi.fn(),
+  getUserPhotos: vi.fn(),
+  countUserPhotos: vi.fn(),
+  getMyUnlockedChats: vi.fn(),
+  createPremiumPayment: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
@@ -177,5 +183,58 @@ describe("admin.users", () => {
   it("throws FORBIDDEN for regular users", async () => {
     const caller = appRouter.createCaller(makeCtx());
     await expect(caller.admin.users()).rejects.toThrow();
+  });
+});
+
+describe("profile.getPlanDetails", () => {
+  it("returns isPremium=false and null planType for non-premium user", async () => {
+    const now = new Date();
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 1, openId: "user-1", name: "Test", email: null, phone: null,
+      loginMethod: null, role: "user", age: 25, gender: "male",
+      location: "Lusaka", church: "UCZ", bio: null, photoUrl: null,
+      photoKey: null, profileComplete: true, isBanned: false,
+      isPremium: false, premiumSince: null,
+      createdAt: now, updatedAt: now, lastSignedIn: now,
+    });
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.profile.getPlanDetails();
+    expect(result.isPremium).toBe(false);
+    expect(result.planType).toBeNull();
+    expect(result.renewalDate).toBeNull();
+  });
+
+  it("returns correct renewal date (premiumSince + 30 days) for premium user", async () => {
+    const premiumSince = new Date("2026-01-01T00:00:00Z");
+    const expectedRenewal = new Date("2026-01-31T00:00:00Z");
+    vi.mocked(db.getUserById).mockResolvedValue({
+      id: 1, openId: "user-1", name: "Test", email: null, phone: null,
+      loginMethod: null, role: "user", age: 25, gender: "male",
+      location: "Lusaka", church: "UCZ", bio: null, photoUrl: null,
+      photoKey: null, profileComplete: true, isBanned: false,
+      isPremium: true, premiumSince,
+      createdAt: premiumSince, updatedAt: premiumSince, lastSignedIn: premiumSince,
+    });
+    const caller = appRouter.createCaller(makeCtx({ isPremium: true }));
+    const result = await caller.profile.getPlanDetails();
+    expect(result.isPremium).toBe(true);
+    expect(result.planType).toBe("Premium Monthly");
+    expect(result.renewalDate?.getTime()).toBe(expectedRenewal.getTime());
+    expect(result.benefits.length).toBeGreaterThan(0);
+  });
+});
+
+describe("profile.cancelPremium", () => {
+  it("cancels premium and calls setUserPremium(false)", async () => {
+    vi.mocked(db.setUserPremium).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx({ isPremium: true }));
+    const result = await caller.profile.cancelPremium();
+    expect(result.success).toBe(true);
+    expect(db.setUserPremium).toHaveBeenCalledWith(1, false);
+  });
+
+  it("throws BAD_REQUEST if user is not premium", async () => {
+    const caller = appRouter.createCaller(makeCtx({ isPremium: false }));
+    await expect(caller.profile.cancelPremium()).rejects.toThrow();
   });
 });

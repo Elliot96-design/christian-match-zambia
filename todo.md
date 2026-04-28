@@ -101,8 +101,8 @@
 - [x] Update profile completion score to reflect newly filled fields in real time
 
 ## Manage Plan Feature
-- [ ] Add profile.getPlanDetails procedure (returns isPremium, premiumSince, renewalDate, planType)
-- [ ] Add profile.cancelPremium procedure (sets isPremium=false)
-- [ ] Build ManagePlanModal component (plan badge, benefits list, renewal info, cancel button with confirm dialog)
-- [ ] Wire Manage Plan button in ProfileTab to ManagePlanModal
-- [ ] Show cancel confirmation dialog before downgrading
+- [x] Add profile.getPlanDetails procedure (returns isPremium, premiumSince, renewalDate, planType)
+- [x] Add profile.cancelPremium procedure (sets isPremium=false)
+- [x] Build ManagePlanModal component (plan badge, benefits list, renewal info, cancel button with confirm dialog)
+- [x] Wire Manage Plan button in ProfileTab to ManagePlanModal
+- [x] Show cancel confirmation dialog before downgrading
