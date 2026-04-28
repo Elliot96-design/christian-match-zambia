@@ -151,7 +151,10 @@ export async function getDistinctLocations(): Promise<string[]> {
 export async function setUserPremium(userId: number, isPremium: boolean): Promise<void> {
   const db = await getDb();
   if (!db) return;
-  await db.update(users).set({ isPremium }).where(eq(users.id, userId));
+  await db
+    .update(users)
+    .set({ isPremium, premiumSince: isPremium ? new Date() : null })
+    .where(eq(users.id, userId));
 }
 
 export async function hasAnyCompletedUnlock(userId: number): Promise<boolean> {

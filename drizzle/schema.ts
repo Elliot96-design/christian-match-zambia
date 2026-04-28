@@ -27,6 +27,7 @@ export const users = mysqlTable("users", {
   profileComplete: boolean("profileComplete").default(false).notNull(),
   isBanned: boolean("isBanned").default(false).notNull(),
   isPremium: boolean("isPremium").default(false).notNull(),
+  premiumSince: timestamp("premiumSince"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

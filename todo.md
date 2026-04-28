@@ -99,3 +99,10 @@
 - [x] Add missing-field indicators (dot/badge) in Personal Details section of Profile tab
 - [x] Highlight incomplete fields in Edit Personal Info, My Faith & Values, Relationship Preferences rows
 - [x] Update profile completion score to reflect newly filled fields in real time
+
+## Manage Plan Feature
+- [ ] Add profile.getPlanDetails procedure (returns isPremium, premiumSince, renewalDate, planType)
+- [ ] Add profile.cancelPremium procedure (sets isPremium=false)
+- [ ] Build ManagePlanModal component (plan badge, benefits list, renewal info, cancel button with confirm dialog)
+- [ ] Wire Manage Plan button in ProfileTab to ManagePlanModal
+- [ ] Show cancel confirmation dialog before downgrading

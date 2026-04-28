@@ -11,6 +11,7 @@ import { useLocation, useSearch } from "wouter";
 import { toast } from "sonner";
 import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
+import ManagePlanModal from "@/components/ManagePlanModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
 
 const DAILY_VERSES = [
@@ -95,6 +96,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
   });
 
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showManagePlan, setShowManagePlan] = useState(false);
 
   const handleMainPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -218,7 +220,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
             <button
               className="px-4 py-2 rounded-xl text-xs font-bold flex-shrink-0"
               style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
-              onClick={() => toast.info("Manage plan coming soon")}
+              onClick={() => setShowManagePlan(true)}
             >
               Manage Plan
             </button>
@@ -483,6 +485,17 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
             utils.profile.premiumStatus.invalidate();
             utils.auth.me.invalidate();
             toast.success("Welcome to Premium! 🎉");
+          }}
+        />
+      )}
+
+      {/* Manage Plan Modal */}
+      {showManagePlan && (
+        <ManagePlanModal
+          onClose={() => setShowManagePlan(false)}
+          onCancelled={() => {
+            utils.profile.premiumStatus.invalidate();
+            utils.auth.me.invalidate();
           }}
         />
       )}

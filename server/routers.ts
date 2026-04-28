@@ -161,6 +161,40 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    // Get current user's plan details
+    getPlanDetails: protectedProcedure.query(async ({ ctx }) => {
+      const user = await getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+      // Renewal date = premiumSince + 30 days (monthly rolling)
+      let renewalDate: Date | null = null;
+      if (user.isPremium && user.premiumSince) {
+        renewalDate = new Date(user.premiumSince);
+        renewalDate.setDate(renewalDate.getDate() + 30);
+      }
+      return {
+        isPremium: user.isPremium,
+        planType: user.isPremium ? "Premium Monthly" : null,
+        premiumSince: user.premiumSince ?? null,
+        renewalDate,
+        amount: 50, // K50/month
+        benefits: [
+          "Unlimited chat unlocks",
+          "Premium badge on your profile",
+          "Priority placement in browse",
+          "See who liked your profile",
+          "Advanced filters (age range, faith level)",
+        ],
+      };
+    }),
+
+    // Cancel premium subscription
+    cancelPremium: protectedProcedure.mutation(async ({ ctx }) => {
+      if (!ctx.user.isPremium)
+        throw new TRPCError({ code: "BAD_REQUEST", message: "You are not a premium member." });
+      await setUserPremium(ctx.user.id, false);
+      return { success: true };
+    }),
+
     // Calculate profile completion score
     completionScore: protectedProcedure.query(async ({ ctx }) => {
       const u = ctx.user;
