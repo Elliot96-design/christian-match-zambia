@@ -106,3 +106,21 @@
 - [x] Build ManagePlanModal component (plan badge, benefits list, renewal info, cancel button with confirm dialog)
 - [x] Wire Manage Plan button in ProfileTab to ManagePlanModal
 - [x] Show cancel confirmation dialog before downgrading
+
+## Chatroom & Faith/Relationship Forms
+- [ ] Add chatroomMessages table (id, userId, content, messageType, category, createdAt)
+- [ ] Add chatroomReactions table (id, messageId, userId, reactionType)
+- [ ] Add faithProfile fields to users: denomination, faithLevel, bibleVersion, prayerFrequency
+- [ ] Add relationshipPrefs fields to users: lookingFor, ageRangeMin, ageRangeMax, preferredLocation
+- [ ] Add chatroom tRPC procedures: getMessages, postMessage, addReaction, getOnlineCount
+- [ ] Add profile.updateFaith and profile.updateRelationshipPrefs procedures
+- [ ] Build Chatroom page: dark bg, online count, category chips, pinned message, message cards, reactions, input bar
+- [ ] Message types: General, Bible Verse, Testimony, Prayer Request, Counseling
+- [ ] Message reactions: heart and pray with counts
+- [ ] Real-time polling every 3s for new chatroom messages
+- [ ] Build FaithValuesForm page with denomination, faith level, church, prayer frequency fields
+- [ ] Build RelationshipPrefsForm page with lookingFor, age range, location preference fields
+- [ ] Wire Chatroom tab in BottomNav to /chatroom route
+- [ ] Wire My Faith & Values row in Profile tab to /faith-values route
+- [ ] Wire Relationship Preferences row in Profile tab to /relationship-prefs route
+- [ ] Ensure no blocked buttons or placeholder screens remain

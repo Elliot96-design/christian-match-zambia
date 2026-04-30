@@ -349,3 +349,174 @@ export async function sendMessage(data: InsertMessage): Promise<Message> {
   const rows = await db.select().from(messages).where(eq(messages.id, insertId)).limit(1);
   return rows[0];
 }
+
+// ─── Chatroom ─────────────────────────────────────────────────────────────────
+
+import {
+  ChatroomMessage,
+  ChatroomReaction,
+  InsertChatroomMessage,
+  chatroomMessages,
+  chatroomReactions,
+} from "../drizzle/schema";
+
+export async function getChatroomMessages(
+  category: string | null,
+  limit = 40,
+  offset = 0
+): Promise<(ChatroomMessage & { userName: string | null; userPhotoUrl: string | null; userIsPremium: boolean })[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [];
+  if (category && category !== "general") {
+    conditions.push(eq(chatroomMessages.category, category as ChatroomMessage["category"]));
+  }
+
+  const rows = await db
+    .select({
+      id: chatroomMessages.id,
+      userId: chatroomMessages.userId,
+      content: chatroomMessages.content,
+      messageType: chatroomMessages.messageType,
+      category: chatroomMessages.category,
+      createdAt: chatroomMessages.createdAt,
+      userName: sql<string>`u.name`,
+      userPhotoUrl: sql<string>`u.photoUrl`,
+      userIsPremium: sql<boolean>`u.isPremium`,
+    })
+    .from(chatroomMessages)
+    .leftJoin(sql`users u`, sql`u.id = ${chatroomMessages.userId}`)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(chatroomMessages.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return rows as (ChatroomMessage & { userName: string | null; userPhotoUrl: string | null; userIsPremium: boolean })[];
+}
+
+export async function postChatroomMessage(data: InsertChatroomMessage): Promise<ChatroomMessage> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(chatroomMessages).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(chatroomMessages).where(eq(chatroomMessages.id, insertId)).limit(1);
+  return rows[0];
+}
+
+export async function getMessageReactions(
+  messageIds: number[]
+): Promise<ChatroomReaction[]> {
+  if (messageIds.length === 0) return [];
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(chatroomReactions)
+    .where(sql`${chatroomReactions.messageId} IN (${sql.join(messageIds.map((id) => sql`${id}`), sql`, `)})`);
+}
+
+export async function toggleChatroomReaction(
+  messageId: number,
+  userId: number,
+  reactionType: "heart" | "pray"
+): Promise<{ added: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+
+  const existing = await db
+    .select()
+    .from(chatroomReactions)
+    .where(
+      and(
+        eq(chatroomReactions.messageId, messageId),
+        eq(chatroomReactions.userId, userId),
+        eq(chatroomReactions.reactionType, reactionType)
+      )
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    await db
+      .delete(chatroomReactions)
+      .where(eq(chatroomReactions.id, existing[0].id));
+    return { added: false };
+  } else {
+    await db.insert(chatroomReactions).values({ messageId, userId, reactionType });
+    return { added: true };
+  }
+}
+
+export async function getChatroomOnlineCount(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  // Count users active in the last 10 minutes
+  const cutoff = new Date(Date.now() - 10 * 60 * 1000);
+  const result = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(and(eq(users.isBanned, false), sql`${users.lastSignedIn} > ${cutoff}`));
+  return Number(result[0]?.count ?? 0);
+}
+
+// ─── Faith & Relationship Profile ────────────────────────────────────────────
+
+export async function updateFaithProfile(
+  userId: number,
+  data: {
+    denomination?: string;
+    faithLevel?: "growing" | "committed" | "deeply_rooted";
+    bibleVersion?: string;
+    prayerFrequency?: "daily" | "weekly" | "occasionally";
+    church?: string;
+  }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set(data).where(eq(users.id, userId));
+}
+
+export async function updateRelationshipPrefs(
+  userId: number,
+  data: {
+    lookingFor?: "marriage" | "friendship" | "dating" | "not_sure";
+    ageRangeMin?: number;
+    ageRangeMax?: number;
+    preferredLocation?: string;
+  }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set(data).where(eq(users.id, userId));
+}
+
+export async function getFaithProfile(userId: number): Promise<{
+  denomination: string | null;
+  faithLevel: string | null;
+  bibleVersion: string | null;
+  prayerFrequency: string | null;
+  church: string | null;
+  lookingFor: string | null;
+  ageRangeMin: number | null;
+  ageRangeMax: number | null;
+  preferredLocation: string | null;
+} | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select({
+      denomination: users.denomination,
+      faithLevel: users.faithLevel,
+      bibleVersion: users.bibleVersion,
+      prayerFrequency: users.prayerFrequency,
+      church: users.church,
+      lookingFor: users.lookingFor,
+      ageRangeMin: users.ageRangeMin,
+      ageRangeMax: users.ageRangeMax,
+      preferredLocation: users.preferredLocation,
+    })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return result[0];
+}

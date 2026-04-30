@@ -28,6 +28,16 @@ export const users = mysqlTable("users", {
   isBanned: boolean("isBanned").default(false).notNull(),
   isPremium: boolean("isPremium").default(false).notNull(),
   premiumSince: timestamp("premiumSince"),
+  // Faith & Values
+  denomination: varchar("denomination", { length: 128 }),
+  faithLevel: mysqlEnum("faithLevel", ["growing", "committed", "deeply_rooted"]),
+  bibleVersion: varchar("bibleVersion", { length: 64 }),
+  prayerFrequency: mysqlEnum("prayerFrequency", ["daily", "weekly", "occasionally"]),
+  // Relationship Preferences
+  lookingFor: mysqlEnum("lookingFor", ["marriage", "friendship", "dating", "not_sure"]),
+  ageRangeMin: int("ageRangeMin"),
+  ageRangeMax: int("ageRangeMax"),
+  preferredLocation: varchar("preferredLocation", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -51,7 +61,7 @@ export const chatUnlocks = mysqlTable("chat_unlocks", {
 export type ChatUnlock = typeof chatUnlocks.$inferSelect;
 export type InsertChatUnlock = typeof chatUnlocks.$inferInsert;
 
-// Chat messages
+// Private chat messages (1-on-1)
 export const messages = mysqlTable("messages", {
   id: int("id").autoincrement().primaryKey(),
   roomId: varchar("roomId", { length: 128 }).notNull(), // sorted "userId1_userId2"
@@ -75,3 +85,41 @@ export const userPhotos = mysqlTable("user_photos", {
 
 export type UserPhoto = typeof userPhotos.$inferSelect;
 export type InsertUserPhoto = typeof userPhotos.$inferInsert;
+
+// Community chatroom messages
+export const chatroomMessages = mysqlTable("chatroom_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  content: text("content").notNull(),
+  messageType: mysqlEnum("messageType", [
+    "general",
+    "bible_verse",
+    "testimony",
+    "prayer_request",
+    "counseling",
+  ]).default("general").notNull(),
+  category: mysqlEnum("category", [
+    "general",
+    "counseling",
+    "testimonies",
+    "bible_verse",
+    "prayer_requests",
+    "prayer_sessions",
+  ]).default("general").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatroomMessage = typeof chatroomMessages.$inferSelect;
+export type InsertChatroomMessage = typeof chatroomMessages.$inferInsert;
+
+// Reactions on community chatroom messages
+export const chatroomReactions = mysqlTable("chatroom_reactions", {
+  id: int("id").autoincrement().primaryKey(),
+  messageId: int("messageId").notNull(),
+  userId: int("userId").notNull(),
+  reactionType: mysqlEnum("reactionType", ["heart", "pray"]).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ChatroomReaction = typeof chatroomReactions.$inferSelect;
+export type InsertChatroomReaction = typeof chatroomReactions.$inferInsert;

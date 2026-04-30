@@ -16,15 +16,23 @@ import {
   getAllPayments,
   getAllUsers,
   getChatUnlock,
+  getChatroomMessages,
+  getChatroomOnlineCount,
   getDistinctLocations,
+  getMessageReactions,
   getMessages,
   getMyUnlockedChats,
   getPendingUnlockById,
   getUserById,
   getUserPhotos,
   hasAnyCompletedUnlock,
+  postChatroomMessage,
   sendMessage,
   setUserPremium,
+  toggleChatroomReaction,
+  getFaithProfile,
+  updateFaithProfile,
+  updateRelationshipPrefs,
   updateUserProfile,
 } from "./db";
 import { storagePut } from "./storage";
@@ -339,6 +347,121 @@ export const appRouter = router({
         const reference = input.mockReference ?? `MOCK-${nanoid(12).toUpperCase()}`;
         await completeChatUnlock(input.paymentId, reference);
         return { success: true, reference };
+      }),
+  }),
+
+  // ─── Chatroom ─────────────────────────────────────────────────────────────
+  chatroom: router({
+    // Get messages for the community chatroom, optionally filtered by category
+    messages: protectedProcedure
+      .input(
+        z.object({
+          category: z.string().nullable().optional(),
+          offset: z.number().int().min(0).default(0),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.isBanned)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Your account has been suspended." });
+        const msgs = await getChatroomMessages(input.category ?? null, 40, input.offset);
+        // Fetch reactions for all returned messages
+        const ids = msgs.map((m) => m.id);
+        const reactions = await getMessageReactions(ids);
+        return msgs.reverse().map((msg) => ({
+          ...msg,
+          reactions: reactions.filter((r) => r.messageId === msg.id),
+        }));
+      }),
+
+    // Post a new message to the community chatroom
+    post: protectedProcedure
+      .input(
+        z.object({
+          content: z.string().min(1).max(1000),
+          messageType: z.enum(["general", "bible_verse", "testimony", "prayer_request", "counseling"]).default("general"),
+          category: z.enum(["general", "counseling", "testimonies", "bible_verse", "prayer_requests", "prayer_sessions"]).default("general"),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.isBanned)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Your account has been suspended." });
+        const msg = await postChatroomMessage({
+          userId: ctx.user.id,
+          content: input.content,
+          messageType: input.messageType,
+          category: input.category,
+        });
+        return msg;
+      }),
+
+    // Toggle a reaction (heart or pray) on a chatroom message
+    react: protectedProcedure
+      .input(
+        z.object({
+          messageId: z.number().int(),
+          reactionType: z.enum(["heart", "pray"]),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        if (ctx.user.isBanned)
+          throw new TRPCError({ code: "FORBIDDEN" });
+        return toggleChatroomReaction(input.messageId, ctx.user.id, input.reactionType);
+      }),
+
+    // Get approximate online member count
+    onlineCount: protectedProcedure.query(async () => {
+      return getChatroomOnlineCount();
+    }),
+  }),
+
+  // ─── Faith & Relationship Profile ─────────────────────────────────────────
+  faithProfile: router({
+    // Get current user's faith & relationship preference fields
+    get: protectedProcedure.query(async ({ ctx }) => {
+      const user = await getUserById(ctx.user.id);
+      if (!user) throw new TRPCError({ code: "NOT_FOUND" });
+      return {
+        denomination: user.denomination,
+        faithLevel: user.faithLevel,
+        bibleVersion: user.bibleVersion,
+        prayerFrequency: user.prayerFrequency,
+        church: user.church,
+        lookingFor: user.lookingFor,
+        ageRangeMin: user.ageRangeMin,
+        ageRangeMax: user.ageRangeMax,
+        preferredLocation: user.preferredLocation,
+      };
+    }),
+
+    // Update faith & values fields
+    updateFaith: protectedProcedure
+      .input(
+        z.object({
+          denomination: z.string().max(128).optional(),
+          faithLevel: z.enum(["growing", "committed", "deeply_rooted"]).optional(),
+          bibleVersion: z.string().max(64).optional(),
+          prayerFrequency: z.enum(["daily", "weekly", "occasionally"]).optional(),
+          church: z.string().max(256).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await updateFaithProfile(ctx.user.id, input);
+        return { success: true };
+      }),
+
+    // Update relationship preferences
+    updateRelationshipPrefs: protectedProcedure
+      .input(
+        z.object({
+          lookingFor: z.enum(["marriage", "friendship", "dating", "not_sure"]).optional(),
+          ageRangeMin: z.number().int().min(18).max(100).optional(),
+          ageRangeMax: z.number().int().min(18).max(100).optional(),
+          preferredLocation: z.string().max(128).optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await updateRelationshipPrefs(ctx.user.id, input);
+        return { success: true };
       }),
   }),
 

@@ -9,9 +9,12 @@ import ProfileSetup from "./pages/ProfileSetup";
 import Browse from "./pages/Browse";
 import ProfileView from "./pages/ProfileView";
 import ChatRoom from "./pages/ChatRoom";
+import ChatroomPage from "./pages/CommunityRoom";
 import AdminPanel from "./pages/AdminPanel";
 import EditProfile from "./pages/EditProfile";
 import LoginSignup from "./pages/LoginSignup";
+import FaithProfile from "./pages/FaithProfile";
+import RelationshipPrefs from "./pages/RelationshipPrefs";
 
 function Router() {
   return (
@@ -23,6 +26,9 @@ function Router() {
       <Route path="/profile/:id" component={ProfileView} />
       <Route path="/chat/:id" component={ChatRoom} />
       <Route path="/edit-profile" component={EditProfile} />
+      <Route path="/faith-profile" component={FaithProfile} />
+      <Route path="/relationship-prefs" component={RelationshipPrefs} />
+      <Route path="/chatroom" component={ChatroomPage} />
       <Route path="/admin" component={AdminPanel} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />

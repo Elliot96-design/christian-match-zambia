@@ -365,7 +365,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
               icon: <BookIcon className="w-4.5 h-4.5" />,
               label: "My Faith & Values",
               sub: "Faith, church, and what matters most",
-              onClick: () => { navigate("/edit-profile"); toast.info("Update your church in Edit Profile"); },
+              onClick: () => navigate("/faith-profile"),
               // Show red dot if church is missing
               incomplete: !user.church,
             },
@@ -373,7 +373,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
               icon: <HeartHandIcon className="w-4.5 h-4.5" />,
               label: "Relationship Preferences",
               sub: "What you're looking for in a partner",
-              onClick: () => toast.info("Relationship preferences coming soon"),
+              onClick: () => navigate("/relationship-prefs"),
               incomplete: false,
             },
           ].map((item, i, arr) => (
