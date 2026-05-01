@@ -8,8 +8,6 @@ import {
   Heart,
   BookOpen,
   Users,
-  Search,
-  MoreVertical,
   Send,
   Plus,
   Pin,
@@ -368,12 +366,9 @@ export default function ChatroomPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <button className="text-gray-400 hover:text-white transition-colors">
-              <Search size={20} />
-            </button>
-            <button className="text-gray-400 hover:text-white transition-colors">
-              <MoreVertical size={20} />
-            </button>
+            <span className="text-xs text-purple-400 font-medium bg-purple-900/40 px-2 py-1 rounded-full">
+              Community
+            </span>
           </div>
         </div>
 
@@ -406,8 +401,11 @@ export default function ChatroomPage() {
             <p className="text-white text-sm font-semibold">Welcome to our safe space 💜</p>
             <p className="text-gray-400 text-xs mt-0.5">Encourage, uplift and support one another in Christ.</p>
           </div>
-          <button className="flex-shrink-0 bg-purple-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg">
-            Learn More
+          <button
+            onClick={() => toast("Community Guidelines: Be respectful, encouraging, and Christ-centred in all messages.")}
+            className="flex-shrink-0 bg-purple-600 text-white text-xs font-semibold px-3 py-1.5 rounded-lg"
+          >
+            Guidelines
           </button>
         </div>
       </div>
@@ -491,7 +489,7 @@ export default function ChatroomPage() {
 
       {/* Bottom nav */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40">
-        <BottomNav active={"chatroom" as NavTab} onTabChange={() => {}} />
+        <BottomNav active={"chatroom" as NavTab} />
       </div>
     </div>
   );

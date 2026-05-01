@@ -26,7 +26,7 @@ function Router() {
       <Route path="/profile/:id" component={ProfileView} />
       <Route path="/chat/:id" component={ChatRoom} />
       <Route path="/edit-profile" component={EditProfile} />
-      <Route path="/faith-profile" component={FaithProfile} />
+      <Route path="/faith-values" component={FaithProfile} />
       <Route path="/relationship-prefs" component={RelationshipPrefs} />
       <Route path="/chatroom" component={ChatroomPage} />
       <Route path="/admin" component={AdminPanel} />

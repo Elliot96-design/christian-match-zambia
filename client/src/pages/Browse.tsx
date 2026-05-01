@@ -365,7 +365,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
               icon: <BookIcon className="w-4.5 h-4.5" />,
               label: "My Faith & Values",
               sub: "Faith, church, and what matters most",
-              onClick: () => navigate("/faith-profile"),
+              onClick: () => navigate("/faith-values"),
               // Show red dot if church is missing
               incomplete: !user.church,
             },
@@ -615,7 +615,13 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
   const tabParam = new URLSearchParams(searchString).get("tab") as NavTab | null;
   const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom"];
   const activeTab: NavTab = tabParam && validTabs.includes(tabParam) ? tabParam : "home";
-  const setActiveTab = (tab: NavTab) => navigate(tab === "home" ? "/browse" : `/browse?tab=${tab}`);
+  const setActiveTab = (tab: NavTab) => {
+    if (tab === "chatroom") {
+      navigate("/chatroom");
+    } else {
+      navigate(tab === "home" ? "/browse" : `/browse?tab=${tab}`);
+    }
+  };
 
   const verseIndex = new Date().getDate() % DAILY_VERSES.length;
   const verse = DAILY_VERSES[verseIndex]!;

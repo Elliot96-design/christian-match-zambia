@@ -108,19 +108,19 @@
 - [x] Show cancel confirmation dialog before downgrading
 
 ## Chatroom & Faith/Relationship Forms
-- [ ] Add chatroomMessages table (id, userId, content, messageType, category, createdAt)
-- [ ] Add chatroomReactions table (id, messageId, userId, reactionType)
-- [ ] Add faithProfile fields to users: denomination, faithLevel, bibleVersion, prayerFrequency
-- [ ] Add relationshipPrefs fields to users: lookingFor, ageRangeMin, ageRangeMax, preferredLocation
-- [ ] Add chatroom tRPC procedures: getMessages, postMessage, addReaction, getOnlineCount
-- [ ] Add profile.updateFaith and profile.updateRelationshipPrefs procedures
-- [ ] Build Chatroom page: dark bg, online count, category chips, pinned message, message cards, reactions, input bar
-- [ ] Message types: General, Bible Verse, Testimony, Prayer Request, Counseling
-- [ ] Message reactions: heart and pray with counts
-- [ ] Real-time polling every 3s for new chatroom messages
-- [ ] Build FaithValuesForm page with denomination, faith level, church, prayer frequency fields
-- [ ] Build RelationshipPrefsForm page with lookingFor, age range, location preference fields
-- [ ] Wire Chatroom tab in BottomNav to /chatroom route
-- [ ] Wire My Faith & Values row in Profile tab to /faith-values route
-- [ ] Wire Relationship Preferences row in Profile tab to /relationship-prefs route
-- [ ] Ensure no blocked buttons or placeholder screens remain
+- [x] Add chatroomMessages table (id, userId, content, messageType, category, createdAt)
+- [x] Add chatroomReactions table (id, messageId, userId, reactionType)
+- [x] Add faithProfile fields to users: denomination, faithLevel, bibleVersion, prayerFrequency
+- [x] Add relationshipPrefs fields to users: lookingFor, ageRangeMin, ageRangeMax, preferredLocation
+- [x] Add chatroom tRPC procedures: getMessages, postMessage, addReaction, getOnlineCount
+- [x] Add profile.updateFaith and profile.updateRelationshipPrefs procedures
+- [x] Build Chatroom page: dark bg, online count, category chips, pinned message, message cards, reactions, input bar
+- [x] Message types: General, Bible Verse, Testimony, Prayer Request, Counseling
+- [x] Message reactions: heart and pray with counts
+- [x] Real-time polling every 3s for new chatroom messages
+- [x] Build FaithValuesForm page with denomination, faith level, church, prayer frequency fields
+- [x] Build RelationshipPrefsForm page with lookingFor, age range, location preference fields
+- [x] Wire Chatroom tab in BottomNav to /chatroom route
+- [x] Wire My Faith & Values row in Profile tab to /faith-values route
+- [x] Wire Relationship Preferences row in Profile tab to /relationship-prefs route
+- [x] Ensure no blocked buttons or placeholder screens remain
