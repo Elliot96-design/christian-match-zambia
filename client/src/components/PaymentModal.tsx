@@ -78,7 +78,7 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-5 text-center">
               <p className="text-muted-foreground text-sm">Unlock chat with</p>
               <p className="font-bold text-foreground text-lg">{targetName}</p>
-              <p className="text-3xl font-bold text-primary mt-1">K10</p>
+              <p className="text-3xl font-bold text-primary mt-1">K20</p>
               <p className="text-xs text-muted-foreground mt-1">One-time payment · Permanent access</p>
             </div>
 
@@ -141,7 +141,7 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
               onClick={handlePay}
               disabled={initiate.isPending || confirm.isPending}
             >
-              Pay K10 with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Test"}
+              Pay K20 with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Test"}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center mt-3">

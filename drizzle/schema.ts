@@ -38,6 +38,11 @@ export const users = mysqlTable("users", {
   ageRangeMin: int("ageRangeMin"),
   ageRangeMax: int("ageRangeMax"),
   preferredLocation: varchar("preferredLocation", { length: 128 }),
+  // Online status & discovery
+  isOnline: boolean("isOnline").default(false).notNull(),
+  lastSeen: timestamp("lastSeen").defaultNow().notNull(),
+  occupation: varchar("occupation", { length: 128 }),
+  isVerified: boolean("isVerified").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -52,7 +57,7 @@ export const chatUnlocks = mysqlTable("chat_unlocks", {
   payerId: int("payerId").notNull(),
   targetId: int("targetId").notNull(),
   status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
-  amount: int("amount").default(10).notNull(), // K10
+  amount: int("amount").default(20).notNull(), // K20
   provider: mysqlEnum("provider", ["mtn", "airtel", "mock"]).default("mock").notNull(),
   reference: varchar("reference", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

@@ -130,8 +130,9 @@ export default function ManagePlanModal({ onClose, onCancelled }: ManagePlanModa
                 <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
                   Monthly fee
                 </span>
-                <span className="font-bold" style={{ color: "#d4a017" }}>
-                  K{plan.amount} / month
+                <span className="font-bold text-right" style={{ color: "#d4a017" }}>
+                  K50 first month<br />
+                  <span className="text-xs font-normal" style={{ color: "rgba(255,255,255,0.55)" }}>K100 / month after</span>
                 </span>
               </div>
             </div>

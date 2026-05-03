@@ -459,6 +459,55 @@ export async function getChatroomOnlineCount(): Promise<number> {
   return Number(result[0]?.count ?? 0);
 }
 
+// ─── Swipe / Discover ───────────────────────────────────────────────────────
+
+export async function browseSwipeList(
+  currentUserId: number,
+  filter: "all" | "online" | "new" | "nearby",
+  currentUserLocation: string | null,
+  limit = 20,
+  offset = 0
+): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  const conditions = [
+    ne(users.id, currentUserId),
+    eq(users.isBanned, false),
+    eq(users.profileComplete, true),
+  ];
+
+  if (filter === "online") {
+    conditions.push(eq(users.isOnline, true));
+  } else if (filter === "new") {
+    // New members: joined in the last 7 days
+    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    conditions.push(sql`${users.createdAt} >= ${cutoff}`);
+  } else if (filter === "nearby" && currentUserLocation) {
+    conditions.push(eq(users.location, currentUserLocation));
+  }
+
+  return db
+    .select()
+    .from(users)
+    .where(and(...conditions))
+    .orderBy(desc(users.isPremium), desc(users.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function setUserOnline(userId: number, isOnline: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ isOnline, lastSeen: new Date() }).where(eq(users.id, userId));
+}
+
+export async function updateUserOccupation(userId: number, occupation: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ occupation }).where(eq(users.id, userId));
+}
+
 // ─── Faith & Relationship Profile ────────────────────────────────────────────
 
 export async function updateFaithProfile(

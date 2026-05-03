@@ -111,7 +111,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
             <div>
               <p className="font-bold text-white text-sm">Upgrade to Premium</p>
               <p style={{ color: "oklch(0.72 0.16 80)" }} className="text-xs font-semibold">
-                K50 / month — Unlimited connections
+                K50 first month · K100 after
               </p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                     </div>
                     <div className="text-left">
                       <p className="font-bold text-gray-800 text-sm">{p.label}</p>
-                      <p className="text-gray-400 text-xs mt-0.5">Pay K50 via {p.label}</p>
+                      <p className="text-gray-400 text-xs mt-0.5">K50 first month · K100 after</p>
                     </div>
                   </button>
                 ))}
@@ -191,7 +191,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                 Enter your {selectedProvider.label} number
               </p>
               <p className="text-xs text-gray-400 mb-4">
-                You will receive a payment prompt on this number for K50.
+                You will receive a payment prompt on this number for K50 (first month).
               </p>
               <div className="flex items-center gap-3 border-2 rounded-2xl px-4 py-3 mb-4" style={{ borderColor: "oklch(0.90 0.02 290)" }}>
                 <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
@@ -239,15 +239,15 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                   <p className="text-xs font-bold mb-1" style={{ color: "oklch(0.28 0.20 290)" }}>
                     Demo mode
                   </p>
-                  <p className="text-xs text-gray-500">
-                    This is a test payment. Tap below to simulate a successful K50 premium upgrade.
-                  </p>
+              <p className="text-xs text-gray-500">
+                This is a test payment. Tap below to simulate a successful K50 first-month premium upgrade.
+              </p>
                 </div>
               )}
               <div className="text-3xl font-display font-bold mb-1" style={{ color: "oklch(0.28 0.20 290)" }}>
                 K50
               </div>
-              <p className="text-xs text-gray-400 mb-5">Premium membership — one month</p>
+              <p className="text-xs text-gray-400 mb-5">K50 first month · K100/month after</p>
               <button
                 onClick={handleConfirm}
                 disabled={confirm.isPending || !paymentId}

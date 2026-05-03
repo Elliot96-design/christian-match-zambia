@@ -124,3 +124,24 @@
 - [x] Wire My Faith & Values row in Profile tab to /faith-values route
 - [x] Wire Relationship Preferences row in Profile tab to /relationship-prefs route
 - [x] Ensure no blocked buttons or placeholder screens remain
+
+## Discover Tab Rebuild & Pricing Update
+- [x] Add isOnline, lastSeen, isNew fields to users table for filter chips
+- [x] Add browse.swipeList procedure returning users with filter (all/online/new/nearby)
+- [x] Add browse.recordSwipe procedure (like/dislike/skip actions, stored for future matching)
+- [x] Update chat unlock fee from K10 to K20 across DB, procedures, and UI
+- [x] Update premium pricing to K50 first month / K100 after in all procedures and UI
+- [x] Build DiscoverTab component: dark bg (#0d0520), Discover header + Premium badge button
+- [x] Add "Unlock the full experience" premium banner with feature icons
+- [x] Add filter chips: All, Online Now, New Members, Nearby
+- [x] Build swipeable profile card: full-bleed photo, Premium Member badge, photo counter (1/N), name/age/verified, location/faith/job/lookingFor, heart save button, gradient overlay
+- [x] Add K20 unlock chat CTA bar below card
+- [x] Add dislike (X), refresh (↺), like (♥) action buttons
+- [x] Add premium upgrade card at bottom with K50/K100 pricing and feature list
+- [x] Wire Swipe tab in BottomNav to show DiscoverTab
+- [x] Ensure Unlock Chat K20 button opens PaymentModal and routes to chat on success
+- [x] Update PaymentModal unlock amount from K10 to K20
+- [x] Update all K50 monthly references to "K50 first month, K100 after"
+- [x] Update PremiumCheckoutModal pricing display
+- [x] Update ManagePlanModal pricing display
+- [x] Update Browse Home tab premium upsell card pricing

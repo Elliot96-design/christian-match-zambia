@@ -1,10 +1,11 @@
 import { useLocation } from "wouter";
 
-export type NavTab = "home" | "swipe" | "chat" | "profile" | "chatroom";
+export type NavTab = "home" | "swipe" | "chat" | "profile" | "chatroom" | "notifications";
 
 interface BottomNavProps {
   active: NavTab;
   onTabChange?: (tab: NavTab) => void;
+  notificationCount?: number;
 }
 
 const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNode }[] = [
@@ -21,21 +22,33 @@ const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNo
   },
   {
     tab: "swipe",
-    label: "Swipe",
+    label: "Discover",
     path: "/browse?tab=swipe",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+        <circle cx="12" cy="12" r="10" />
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
   {
-    tab: "chat",
-    label: "Chat",
-    path: "/browse?tab=chat",
+    tab: "chatroom",
+    label: "Chatroom",
+    path: "/chatroom",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <path d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
+      </svg>
+    ),
+  },
+  {
+    tab: "notifications",
+    label: "Notifications",
+    path: "/browse?tab=notifications",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
       </svg>
     ),
   },
@@ -50,22 +63,16 @@ const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNo
       </svg>
     ),
   },
-  {
-    tab: "chatroom",
-    label: "Chatroom",
-    path: "/chatroom",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <path d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0z" />
-      </svg>
-    ),
-  },
 ];
 
-export default function BottomNav({ active, onTabChange }: BottomNavProps) {
+export default function BottomNav({ active, onTabChange, notificationCount = 3 }: BottomNavProps) {
   const [, navigate] = useLocation();
 
-  const handleTab = (item: typeof NAV_ITEMS[number]) => {
+  const handleTab = (item: (typeof NAV_ITEMS)[number]) => {
+    if (item.tab === "chatroom") {
+      navigate("/chatroom");
+      return;
+    }
     if (onTabChange) {
       onTabChange(item.tab);
     } else {
@@ -91,12 +98,14 @@ export default function BottomNav({ active, onTabChange }: BottomNavProps) {
             className="flex flex-col items-center gap-0.5 px-2 py-1 relative min-w-[44px]"
             aria-label={item.label}
           >
-            {/* Chat notification dot */}
-            {item.tab === "chat" && (
+            {/* Notification badge */}
+            {item.tab === "notifications" && notificationCount > 0 && (
               <span
-                className="absolute top-0 right-2 w-2 h-2 rounded-full"
-                style={{ background: "oklch(0.72 0.16 80)" }}
-              />
+                className="absolute -top-0.5 right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
+                style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
+              >
+                {notificationCount > 9 ? "9+" : notificationCount}
+              </span>
             )}
             <span style={{ color: isActive ? "oklch(0.72 0.16 80)" : "oklch(0.70 0.05 290)" }}>
               {item.icon}

@@ -160,7 +160,7 @@ export default function ProfileView() {
               >
                 <Lock className="w-5 h-5" />
                 <span>
-                  Pay <span className="text-gold font-bold">K15</span> to unlock chat with {profile.name?.split(" ")[0] ?? "them"}
+                  Pay <span className="text-gold font-bold">K20</span> to unlock chat with {profile.name?.split(" ")[0] ?? "them"}
                 </span>
               </button>
             )}

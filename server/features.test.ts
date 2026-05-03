@@ -122,7 +122,7 @@ describe("payment.initiate", () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.payment.initiate({ targetId: 2, provider: "mock" });
     expect(result.paymentId).toBe(42);
-    expect(result.amount).toBe(10);
+    expect(result.amount).toBe(20);
   });
 
   it("throws if chat already unlocked", async () => {

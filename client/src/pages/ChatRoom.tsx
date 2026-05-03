@@ -102,7 +102,7 @@ export default function ChatRoom() {
             </div>
             <p className="font-display font-bold text-foreground text-lg">Chat Locked</p>
             <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
-              This chat is not unlocked. Go back to the profile and pay K10 to unlock.
+              This chat is not unlocked. Go back to the profile and pay K20 to unlock.
             </p>
             <Button
               className="mt-5 btn-purple px-8 h-12"

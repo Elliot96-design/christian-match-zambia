@@ -8,6 +8,8 @@ import {
   addUserPhoto,
   banUser,
   browseUsers,
+  browseSwipeList,
+  setUserOnline,
   buildRoomId,
   completeChatUnlock,
   countUserPhotos,
@@ -184,7 +186,8 @@ export const appRouter = router({
         planType: user.isPremium ? "Premium Monthly" : null,
         premiumSince: user.premiumSince ?? null,
         renewalDate,
-        amount: 50, // K50/month
+        amount: 50, // K50 first month, K100 after
+        renewalAmount: 100,
         benefits: [
           "Unlimited chat unlocks",
           "Premium badge on your profile",
@@ -242,6 +245,30 @@ export const appRouter = router({
         return list;
       }),
 
+    // Swipe/Discover list with filter chips
+    swipeList: protectedProcedure
+      .input(
+        z.object({
+          filter: z.enum(["all", "online", "new", "nearby"]).default("all"),
+          offset: z.number().int().min(0).default(0),
+        })
+      )
+      .query(async ({ ctx, input }) => {
+        if (ctx.user.isBanned)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Your account has been suspended." });
+        // Mark current user as online
+        await setUserOnline(ctx.user.id, true);
+        const user = await getUserById(ctx.user.id);
+        const list = await browseSwipeList(
+          ctx.user.id,
+          input.filter,
+          user?.location ?? null,
+          20,
+          input.offset
+        );
+        return list;
+      }),
+
     locations: protectedProcedure.query(async () => {
       return getDistinctLocations();
     }),
@@ -289,12 +316,13 @@ export const appRouter = router({
 
   // ─── Payments ─────────────────────────────────────────────────────────────
   payment: router({
-    // Initiate a premium subscription payment (K50)
+    // Initiate a premium subscription payment (K50 first month, K100 after)
     initiatePremium: protectedProcedure
       .input(z.object({ provider: z.enum(["mtn", "airtel", "mock"]), phone: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         if (ctx.user.isPremium) throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
+        // K50 for first month, K100 recurring — charge K50 now
         const id = await createPremiumPayment({ payerId: ctx.user.id, amount: 50, provider: input.provider });
         return { paymentId: id, amount: 50, provider: input.provider };
       }),
@@ -312,7 +340,7 @@ export const appRouter = router({
         return { success: true, reference };
       }),
 
-    // Initiate a single-chat unlock payment (K10)
+    // Initiate a single-chat unlock payment (K20)
     initiate: protectedProcedure
       .input(
         z.object({
@@ -330,11 +358,11 @@ export const appRouter = router({
         const id = await createChatUnlock({
           payerId: ctx.user.id,
           targetId: input.targetId,
-          amount: 10,
+          amount: 20,
           provider: input.provider,
           status: "pending",
         });
-        return { paymentId: id, amount: 10, provider: input.provider };
+        return { paymentId: id, amount: 20, provider: input.provider };
       }),
 
     // Confirm a single-chat unlock payment

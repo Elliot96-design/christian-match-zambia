@@ -13,6 +13,7 @@ import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import ManagePlanModal from "@/components/ManagePlanModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
+import DiscoverTab from "@/pages/DiscoverTab";
 
 const DAILY_VERSES = [
   { text: "Commit to the Lord whatever you do, and he will establish your plans.", ref: "Proverbs 16:3" },
@@ -613,7 +614,7 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
 
   // Derive active tab from URL query param
   const tabParam = new URLSearchParams(searchString).get("tab") as NavTab | null;
-  const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom"];
+  const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom", "notifications"];
   const activeTab: NavTab = tabParam && validTabs.includes(tabParam) ? tabParam : "home";
   const setActiveTab = (tab: NavTab) => {
     if (tab === "chatroom") {
@@ -701,73 +702,9 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
       return <ProfileTab user={user} onLogout={handleLogout} navigate={navigate} onTabChange={setActiveTab} />;
     }
 
-    // ── SWIPE tab ─────────────────────────────────────────────
+    // ── SWIPE / DISCOVER tab ───────────────────────────────────────────────
     if (activeTab === "swipe") {
-      return (
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
-          <h2 className="font-display font-bold text-xl text-foreground mb-3">Discover Members</h2>
-          <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar pb-1">
-            {(["male", "female"] as const).map((g) => (
-              <button
-                key={g}
-                onClick={() => setFilterGender(filterGender === g ? undefined : g)}
-                className={`px-4 py-2 rounded-full text-sm font-medium flex-shrink-0 transition-colors ${
-                  filterGender === g ? "bg-primary text-white" : "bg-white text-gray-600 border border-gray-200"
-                }`}
-              >
-                {g === "male" ? "Men" : "Women"}
-              </button>
-            ))}
-            {ZAMBIA_LOCATIONS.slice(0, 5).map((loc) => (
-              <button
-                key={loc}
-                onClick={() => setFilterLocation(filterLocation === loc ? undefined : loc)}
-                className={`px-4 py-2 rounded-full text-sm font-medium flex-shrink-0 transition-colors ${
-                  filterLocation === loc ? "bg-primary text-white" : "bg-white text-gray-600 border border-gray-200"
-                }`}
-              >
-                {loc}
-              </button>
-            ))}
-          </div>
-          {isLoading ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[...Array(4)].map((_, i) => <div key={i} className="aspect-[3/4] rounded-2xl bg-gray-200 animate-pulse" />)}
-            </div>
-          ) : !browseUsers || browseUsers.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <Users className="w-12 h-12 text-gray-300 mb-3" />
-              <p className="font-semibold text-gray-700">No members found</p>
-              <p className="text-gray-400 text-sm mt-1">Try adjusting your filters</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3">
-              {browseUsers.map((u) => (
-                <button key={u.id} onClick={() => navigate(`/profile/${u.id}`)} className="profile-card bg-white text-left">
-                  <div className="aspect-[3/4] bg-gray-100 relative overflow-hidden">
-                    {u.photoUrl ? (
-                      <img src={u.photoUrl} alt={u.name ?? ""} className="w-full h-full object-cover" loading="lazy" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <PersonIcon className="w-10 h-10 text-gray-300" />
-                      </div>
-                    )}
-                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
-                      <p className="text-white font-semibold text-sm">{u.name ?? "Member"}{u.age ? `, ${u.age}` : ""}</p>
-                      {u.church && <p className="text-white/70 text-xs truncate">{u.church}</p>}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          {browseUsers && browseUsers.length >= 20 && (
-            <button onClick={() => setOffset((o) => o + 20)} className="w-full mt-4 h-12 rounded-2xl border border-gray-200 text-sm font-medium text-primary">
-              Load more
-            </button>
-          )}
-        </div>
-      );
+      return <DiscoverTab />;
     }
 
     // ── CHAT tab ────────────────────────────────────────────────────
@@ -775,20 +712,28 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
       return <ChatTab onBrowse={() => setActiveTab("swipe")} navigate={navigate} />;
     }
 
-    // ── CHATROOM tab ──────────────────────────────────────────
-    if (activeTab === "chatroom") {
+    // ── NOTIFICATIONS tab ──────────────────────────────────────────────────
+    if (activeTab === "notifications") {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 text-center pb-24">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-primary" />
-          </div>
-          <h3 className="font-display font-bold text-xl text-foreground">Community Chatroom</h3>
-          <p className="text-gray-500 text-sm mt-2 max-w-xs">
-            Group discussions for the Faithful Hearts community — coming soon for Premium members.
-          </p>
-          <div className="badge-premium mt-4 inline-flex items-center gap-1.5">
-            <Crown className="w-3.5 h-3.5" />
-            Premium Feature
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
+          <h2 className="font-display font-bold text-xl text-foreground mb-4">Notifications</h2>
+          <div className="flex flex-col gap-3">
+            {[
+              { icon: "❤️", title: "Someone liked your profile", time: "2 min ago", desc: "A new member liked your profile. Upgrade to see who!" },
+              { icon: "💬", title: "New message request", time: "1 hr ago", desc: "You have a new chat unlock request waiting." },
+              { icon: "👑", title: "Premium reminder", time: "3 hrs ago", desc: "Upgrade to Premium for K50 first month to unlock unlimited features." },
+            ].map((n, i) => (
+              <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg flex-shrink-0">{n.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-semibold text-sm text-foreground">{n.title}</p>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">{n.time}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       );
@@ -885,7 +830,7 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-bold text-gray-800 text-sm">Premium Members Unlock More</p>
-              <p className="text-gray-400 text-xs mt-0.5">Like, match, and start meaningful conversations.</p>
+              <p className="text-gray-400 text-xs mt-0.5">K50 first month · K100 after. Unlimited features.</p>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
           </div>
