@@ -639,3 +639,74 @@ export async function getSuggestedProfiles(currentUserId: number, limit = 8): Pr
     .orderBy(desc(users.isPremium), desc(users.isOnline), desc(users.createdAt))
     .limit(limit);
 }
+
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+export interface NotificationItem {
+  id: string;
+  type: "like" | "announcement" | "premium_reminder";
+  title: string;
+  description: string;
+  createdAt: Date;
+  read: boolean;
+  meta?: Record<string, unknown>;
+}
+
+export async function getNotificationsForUser(userId: number): Promise<NotificationItem[]> {
+  const db = await getDb();
+  const items: NotificationItem[] = [];
+
+  if (db) {
+    // Likes: people who unlocked chat with this user (they "liked" them)
+    const likes = await db
+      .select({ id: chatUnlocks.id, payerId: chatUnlocks.payerId, createdAt: chatUnlocks.createdAt })
+      .from(chatUnlocks)
+      .where(and(eq(chatUnlocks.targetId, userId), eq(chatUnlocks.status, "completed")))
+      .orderBy(desc(chatUnlocks.createdAt))
+      .limit(10);
+
+    for (const like of likes) {
+      items.push({
+        id: `like-${like.id}`,
+        type: "like",
+        title: "Someone unlocked your chat",
+        description: "A member paid K20 to start a conversation with you. Check your messages!",
+        createdAt: like.createdAt,
+        read: false,
+        meta: { payerId: like.payerId },
+      });
+    }
+
+    // Announcements
+    const ann = await db
+      .select()
+      .from(announcements)
+      .orderBy(desc(announcements.createdAt))
+      .limit(5);
+
+    for (const a of ann) {
+      items.push({
+        id: `ann-${a.id}`,
+        type: "announcement",
+        title: a.title,
+        description: a.content,
+        createdAt: a.createdAt,
+        read: false,
+      });
+    }
+  }
+
+  // Premium reminder (static, always shown for non-premium users)
+  items.push({
+    id: "premium-reminder",
+    type: "premium_reminder",
+    title: "Upgrade to Premium",
+    description: "Chat with all members, see who liked you, and get unlimited matches for K50 first month.",
+    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
+    read: false,
+  });
+
+  // Sort by date descending
+  items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  return items;
+}

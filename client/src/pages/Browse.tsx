@@ -15,6 +15,7 @@ import ManagePlanModal from "@/components/ManagePlanModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
 import DiscoverTab from "@/pages/DiscoverTab";
 import HomeTab from "@/pages/HomeTab";
+import NotificationsTab from "@/pages/NotificationsTab";
 
 const DAILY_VERSES = [
   { text: "Commit to the Lord whatever you do, and he will establish your plans.", ref: "Proverbs 16:3" },
@@ -714,29 +715,8 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
     }
 
     // ── NOTIFICATIONS tab ───────────────────────────────────────────────────────────
-    if (activeTab === "notifications") {   return (
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
-          <h2 className="font-display font-bold text-xl text-foreground mb-4">Notifications</h2>
-          <div className="flex flex-col gap-3">
-            {[
-              { icon: "❤️", title: "Someone liked your profile", time: "2 min ago", desc: "A new member liked your profile. Upgrade to see who!" },
-              { icon: "💬", title: "New message request", time: "1 hr ago", desc: "You have a new chat unlock request waiting." },
-              { icon: "👑", title: "Premium reminder", time: "3 hrs ago", desc: "Upgrade to Premium for K50 first month to unlock unlimited features." },
-            ].map((n, i) => (
-              <div key={i} className="flex items-start gap-3 p-4 rounded-2xl bg-white border border-gray-100 shadow-sm">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-lg flex-shrink-0">{n.icon}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold text-sm text-foreground">{n.title}</p>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">{n.time}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{n.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
+    if (activeTab === "notifications") {
+      return <NotificationsTab onTabChange={setActiveTab} />;
     }
 
     // ── HOME tab (default) ────────────────────────────────────────────────────────────────
@@ -759,7 +739,11 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
           <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
         </div>
         <div className="relative">
-          <button className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10">
+          <button
+            onClick={() => setActiveTab("notifications")}
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10"
+            aria-label="Notifications"
+          >
             <Bell className="w-5 h-5 text-white" />
           </button>
           <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-primary text-[9px] font-bold rounded-full flex items-center justify-center">3</span>

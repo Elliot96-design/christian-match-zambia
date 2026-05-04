@@ -49,6 +49,7 @@ function SuggestedProfileCard({
   profile,
   onUnlock,
   onLike,
+  onUpgradePremium,
   isPremiumUser,
 }: {
   profile: {
@@ -64,6 +65,7 @@ function SuggestedProfileCard({
   };
   onUnlock: (id: number) => void;
   onLike: (id: number) => void;
+  onUpgradePremium: () => void;
   isPremiumUser: boolean;
 }) {
   const firstName = profile.name?.split(" ")[0] ?? "Member";
@@ -152,24 +154,28 @@ function SuggestedProfileCard({
       <div className="px-2 pt-1.5 pb-2">
         {/* K20 badge or premium upgrade */}
         {profile.isPremium && !isPremiumUser ? (
-          <div
-            className="w-full text-center text-[9px] font-bold py-1 px-1.5 rounded-lg mb-1.5"
+          <button
+            onClick={() => onUpgradePremium()}
+            className="w-full text-center text-[9px] font-bold py-1.5 px-1.5 rounded-lg mb-1.5 active:scale-95 transition-transform"
             style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.18 0.12 290)" }}
           >
             Upgrade to Premium<br />to chat with this member
-          </div>
+          </button>
         ) : !isPremiumUser ? (
-          <div className="flex items-center gap-1.5 mb-1.5">
+          <button
+            onClick={() => onUnlock(profile.id)}
+            className="flex items-center gap-1.5 mb-1.5 w-full active:scale-95 transition-transform"
+          >
             <span
-              className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+              className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
               style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.18 0.12 290)" }}
             >
               K20
             </span>
-            <span className="text-[9px]" style={{ color: "oklch(0.50 0.08 290)" }}>
+            <span className="text-[9px] text-left" style={{ color: "oklch(0.50 0.08 290)" }}>
               Once off payment<br />to unlock chat
             </span>
-          </div>
+          </button>
         ) : (
           <div className="mb-1.5 h-5" />
         )}
@@ -607,6 +613,7 @@ export default function HomeTab({
                   profile={profile}
                   onUnlock={handleUnlockChat}
                   onLike={handleLike}
+                  onUpgradePremium={() => setShowPremium(true)}
                   isPremiumUser={isPremium}
                 />
               ))}

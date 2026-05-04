@@ -41,6 +41,7 @@ import {
   getAnnouncements,
   createAnnouncement,
   getSuggestedProfiles,
+  getNotificationsForUser,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -510,6 +511,10 @@ export const appRouter = router({
 
     announcements: protectedProcedure.query(async () => {
       return getAnnouncements(10);
+    }),
+
+    notifications: protectedProcedure.query(async ({ ctx }) => {
+      return getNotificationsForUser(ctx.user.id);
     }),
   }),
 

@@ -15,6 +15,7 @@ import EditProfile from "./pages/EditProfile";
 import LoginSignup from "./pages/LoginSignup";
 import FaithProfile from "./pages/FaithProfile";
 import RelationshipPrefs from "./pages/RelationshipPrefs";
+import { Redirect } from "wouter";
 
 function Router() {
   return (
@@ -30,6 +31,8 @@ function Router() {
       <Route path="/relationship-prefs" component={RelationshipPrefs} />
       <Route path="/chatroom" component={ChatroomPage} />
       <Route path="/admin" component={AdminPanel} />
+      <Route path="/notifications">{() => <Redirect to="/browse?tab=notifications" />}</Route>
+      <Route path="/messages">{() => <Redirect to="/browse?tab=messages" />}</Route>
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
