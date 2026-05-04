@@ -1,6 +1,6 @@
 import { useLocation } from "wouter";
 
-export type NavTab = "home" | "swipe" | "chat" | "profile" | "chatroom" | "notifications";
+export type NavTab = "home" | "swipe" | "chat" | "profile" | "chatroom" | "notifications" | "messages";
 
 interface BottomNavProps {
   active: NavTab;
@@ -42,13 +42,15 @@ const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNo
     ),
   },
   {
-    tab: "notifications",
-    label: "Notifications",
-    path: "/browse?tab=notifications",
+    tab: "messages",
+    label: "Messages",
+    path: "/browse?tab=messages",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <circle cx="9" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="12" cy="10" r="1" fill="currentColor" stroke="none" />
+        <circle cx="15" cy="10" r="1" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -71,6 +73,11 @@ export default function BottomNav({ active, onTabChange, notificationCount = 3 }
   const handleTab = (item: (typeof NAV_ITEMS)[number]) => {
     if (item.tab === "chatroom") {
       navigate("/chatroom");
+      return;
+    }
+    if (item.tab === "messages") {
+      if (onTabChange) onTabChange("chat");
+      else navigate("/browse?tab=chat");
       return;
     }
     if (onTabChange) {
@@ -99,7 +106,7 @@ export default function BottomNav({ active, onTabChange, notificationCount = 3 }
             aria-label={item.label}
           >
             {/* Notification badge */}
-            {item.tab === "notifications" && notificationCount > 0 && (
+            {item.tab === "messages" && notificationCount > 0 && (
               <span
                 className="absolute -top-0.5 right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
                 style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}

@@ -14,6 +14,7 @@ import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import ManagePlanModal from "@/components/ManagePlanModal";
 import BottomNav, { NavTab } from "@/components/BottomNav";
 import DiscoverTab from "@/pages/DiscoverTab";
+import HomeTab from "@/pages/HomeTab";
 
 const DAILY_VERSES = [
   { text: "Commit to the Lord whatever you do, and he will establish your plans.", ref: "Proverbs 16:3" },
@@ -614,7 +615,7 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
 
   // Derive active tab from URL query param
   const tabParam = new URLSearchParams(searchString).get("tab") as NavTab | null;
-  const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom", "notifications"];
+  const validTabs: NavTab[] = ["home", "swipe", "chat", "profile", "chatroom", "notifications", "messages"];
   const activeTab: NavTab = tabParam && validTabs.includes(tabParam) ? tabParam : "home";
   const setActiveTab = (tab: NavTab) => {
     if (tab === "chatroom") {
@@ -708,13 +709,12 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
     }
 
     // ── CHAT tab ────────────────────────────────────────────────────
-    if (activeTab === "chat") {
+    if (activeTab === "chat" || activeTab === "messages") {
       return <ChatTab onBrowse={() => setActiveTab("swipe")} navigate={navigate} />;
     }
 
-    // ── NOTIFICATIONS tab ──────────────────────────────────────────────────
-    if (activeTab === "notifications") {
-      return (
+    // ── NOTIFICATIONS tab ───────────────────────────────────────────────────────────
+    if (activeTab === "notifications") {   return (
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24">
           <h2 className="font-display font-bold text-xl text-foreground mb-4">Notifications</h2>
           <div className="flex flex-col gap-3">
@@ -739,126 +739,9 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
       );
     }
 
-    // ── HOME tab (default) ────────────────────────────────────
+    // ── HOME tab (default) ────────────────────────────────────────────────────────────────
     return (
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Greeting strip */}
-        <div className="hero-gradient px-5 pt-4 pb-5 flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-white font-bold text-base">
-                {greeting}, {firstName}! ✨
-              </p>
-              <p className="text-white/70 text-xs">Let your faith guide your heart.</p>
-            </div>
-            <button className="btn-gold flex items-center gap-1.5 px-3 py-2 text-xs">
-              <Crown className="w-3 h-3" />
-              Go Premium
-            </button>
-          </div>
-        </div>
-
-        {/* Scrollable content */}
-        <div className="flex-1 overflow-y-auto px-4 pt-3 pb-24 space-y-3">
-          {/* Profile swipe card */}
-          {isLoading ? (
-            <div className="profile-card bg-gray-200 h-64 animate-pulse" />
-          ) : currentCard ? (
-            <div className="profile-card relative overflow-hidden">
-              <div className="relative h-64 bg-gray-100">
-                {currentCard.photoUrl ? (
-                  <img src={currentCard.photoUrl} alt={currentCard.name ?? "Member"} className="w-full h-full object-cover" loading="lazy" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-primary/10">
-                    <PersonIcon className="w-16 h-16 text-primary/30" />
-                  </div>
-                )}
-                <div className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-2.5 py-1 rounded-full">New</div>
-                <button onClick={handleSwipeLike} className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full flex items-center justify-center shadow-md">
-                  <Heart className="w-4.5 h-4.5 text-primary" />
-                </button>
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-4 pt-6 pb-3">
-                  <div className="flex items-center gap-1.5">
-                    <p className="text-white font-bold text-lg">{currentCard.name ?? "Member"}{currentCard.age ? `, ${currentCard.age}` : ""}</p>
-                    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-blue-400 flex-shrink-0">
-                      <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  {currentCard.church && <p className="text-white/80 text-xs">{currentCard.church}</p>}
-                  {currentCard.location && (
-                    <div className="flex items-center gap-1 mt-0.5">
-                      <MapPin className="w-3 h-3 text-white/60" />
-                      <span className="text-white/70 text-xs">{currentCard.location}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {/* Action buttons */}
-              <div className="flex items-center justify-center gap-6 py-3 bg-white">
-                <button onClick={handleSwipeNext} className="w-12 h-12 rounded-full border-2 border-gray-200 flex items-center justify-center shadow-sm">
-                  <X className="w-5 h-5 text-gray-400" />
-                </button>
-                <button onClick={handleSwipeLike} className="w-12 h-12 rounded-full flex items-center justify-center shadow-md" style={{ background: "oklch(0.28 0.20 290)" }}>
-                  <Heart className="w-5 h-5 text-white fill-white" />
-                </button>
-              </div>
-              {/* Unlock banner */}
-              <button
-                onClick={() => handleUnlockChat(currentCard.id)}
-                className="w-full flex items-center justify-center gap-2 py-3 text-white text-sm font-semibold"
-                style={{ background: "oklch(0.28 0.20 290)" }}
-              >
-                <Lock className="w-4 h-4" />
-                Pay <span style={{ color: "oklch(0.72 0.16 80)" }} className="font-bold mx-0.5">K10</span> to permanently unlock chat with {currentCard.name?.split(" ")[0] ?? "them"}
-              </button>
-            </div>
-          ) : (
-            <div className="profile-card bg-white flex flex-col items-center justify-center py-12 text-center px-6">
-              <Users className="w-10 h-10 text-gray-300 mb-3" />
-              <p className="font-semibold text-gray-700">No members found</p>
-              <p className="text-gray-400 text-sm mt-1">Be the first to join!</p>
-              <button onClick={() => refetch()} className="mt-3 flex items-center gap-2 text-primary text-sm font-medium">
-                <RefreshCw className="w-4 h-4" /> Refresh
-              </button>
-            </div>
-          )}
-
-          {/* Premium upsell */}
-          <div className="rounded-2xl p-4 flex items-center gap-3 bg-white" style={{ border: "1px solid oklch(0.92 0.03 290)" }}>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "oklch(0.28 0.20 290)" }}>
-              <Crown className="w-5 h-5 text-yellow-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-bold text-gray-800 text-sm">Premium Members Unlock More</p>
-              <p className="text-gray-400 text-xs mt-0.5">K50 first month · K100 after. Unlimited features.</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-300 flex-shrink-0" />
-          </div>
-
-          {/* Daily Verse */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <p className="font-bold text-gray-800 text-sm">Community Spotlight</p>
-              <button className="text-primary text-xs font-medium">View All</button>
-            </div>
-            <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, oklch(0.55 0.10 60) 0%, oklch(0.45 0.12 55) 100%)" }}>
-              <div className="p-4 flex gap-3">
-                <div className="flex-1">
-                  <p className="text-white font-bold text-sm mb-1">Daily Verse</p>
-                  <p className="text-white/90 text-sm italic leading-relaxed">"{verse.text}"</p>
-                  <p className="text-white/70 text-xs mt-1.5">— {verse.ref}</p>
-                </div>
-                <div className="w-12 flex items-center justify-center opacity-25">
-                  <svg viewBox="0 0 40 60" fill="none" className="w-full">
-                    <line x1="20" y1="2" x2="20" y2="58" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                    <line x1="8" y1="16" x2="32" y2="16" stroke="white" strokeWidth="3" strokeLinecap="round" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <HomeTab onTabChange={(tab) => setActiveTab(tab as NavTab)} notificationCount={3} />
     );
   };
 

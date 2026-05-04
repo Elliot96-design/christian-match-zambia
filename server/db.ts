@@ -569,3 +569,73 @@ export async function getFaithProfile(userId: number): Promise<{
     .limit(1);
   return result[0];
 }
+
+// ─── Love Stories ─────────────────────────────────────────────────────────────
+
+import {
+  Announcement,
+  InsertAnnouncement,
+  InsertLoveStory,
+  LoveStory,
+  announcements,
+  loveStories,
+} from "../drizzle/schema";
+
+export async function getLoveStories(limit = 10): Promise<LoveStory[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(loveStories)
+    .orderBy(desc(loveStories.createdAt))
+    .limit(limit);
+}
+
+export async function createLoveStory(data: InsertLoveStory): Promise<LoveStory> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(loveStories).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(loveStories).where(eq(loveStories.id, insertId)).limit(1);
+  return rows[0];
+}
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+export async function getAnnouncements(limit = 10): Promise<Announcement[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(announcements)
+    .orderBy(desc(announcements.createdAt))
+    .limit(limit);
+}
+
+export async function createAnnouncement(data: InsertAnnouncement): Promise<Announcement> {
+  const db = await getDb();
+  if (!db) throw new Error("DB not available");
+  const result = await db.insert(announcements).values(data);
+  const insertId = (result[0] as { insertId: number }).insertId;
+  const rows = await db.select().from(announcements).where(eq(announcements.id, insertId)).limit(1);
+  return rows[0];
+}
+
+// ─── Suggested Profiles ───────────────────────────────────────────────────────
+
+export async function getSuggestedProfiles(currentUserId: number, limit = 8): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(users)
+    .where(
+      and(
+        ne(users.id, currentUserId),
+        eq(users.isBanned, false),
+        eq(users.profileComplete, true),
+      )
+    )
+    .orderBy(desc(users.isPremium), desc(users.isOnline), desc(users.createdAt))
+    .limit(limit);
+}

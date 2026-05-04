@@ -145,3 +145,31 @@
 - [x] Update PremiumCheckoutModal pricing display
 - [x] Update ManagePlanModal pricing display
 - [x] Update Browse Home tab premium upsell card pricing
+
+## Home Screen Rebuild (Reference Design)
+- [ ] Generate cross/sunset background image for Daily Bible Verse card
+- [ ] Add loveStories table (id, coupleName, location, quote, story, photoUrl, photoKey, createdAt)
+- [ ] Add announcements table (id, title, content, createdAt, adminId)
+- [ ] Add home.loveStories procedure (returns all love stories)
+- [ ] Add home.announcements procedure (returns latest announcements)
+- [ ] Add home.suggestedProfiles procedure (returns profiles with isPremium, isOnline, occupation, denomination)
+- [ ] Add admin.createAnnouncement procedure (admin-only)
+- [ ] Add admin.createLoveStory procedure (admin-only)
+- [ ] Rebuild Browse Home tab: exact reference layout
+- [ ] Header: hamburger menu, Faithful Hearts logo+tagline, notification bell with badge
+- [ ] Greeting section: "Good morning, [username]! ✨" + "Let your faith guide your heart." left side
+- [ ] Go Premium card right side: dark purple, crown icon, checklist (Chat with all members, See who liked you, Unlimited matches), K50 first month | K100 after, chevron right, routes to PremiumCheckoutModal
+- [ ] Daily Bible Verse card: dark card with cross/sunset background image right side, book icon, verse text, Share button
+- [ ] Suggested For You section: horizontal scroll, "View all" link
+- [ ] Profile cards: photo, heart save button, name+verified badge, online dot+city, K20 badge + "Once off payment to unlock chat" for non-premium users, "Upgrade to Premium to chat with this member" gold button for premium profiles, denomination+occupation footer
+- [ ] Premium member badge on premium profiles in Suggested For You
+- [ ] Love Stories card: couple photo left, story content right, 1/N counter, couple name+location, quote title, story text, "God writes the best love stories. ✨", dot pagination, auto-slides every 5s
+- [ ] Updates card: dark purple bg, megaphone icon, UPDATES label + NEW badge, latest announcement text + timestamp, View all button
+- [ ] Complete Your Profile card: circular progress (70%), "Complete your profile" title, subtitle, "Complete Now" purple button → routes to /edit-profile
+- [ ] Replace Notifications tab in BottomNav with Messages tab (chat bubble icon) → routes to /messages
+- [ ] Wire notification bell in header → routes to /notifications screen
+- [ ] Build /notifications screen showing all notifications (likes, announcements, premium reminders)
+- [ ] Build /messages screen showing all private conversations (existing chat list)
+- [ ] Ensure Go Premium card routes to PremiumCheckoutModal
+- [ ] Ensure K20 cards open PaymentModal for that user
+- [ ] Ensure "Upgrade to Premium to chat" button opens PremiumCheckoutModal

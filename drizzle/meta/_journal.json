@@ -43,6 +43,13 @@
       "when": 1777676078653,
       "tag": "0005_thick_thunderbolt",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1777851931079,
+      "tag": "0006_spooky_crystal",
+      "breakpoints": true
     }
   ]
 }

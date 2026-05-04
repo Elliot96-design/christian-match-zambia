@@ -36,6 +36,11 @@ import {
   updateFaithProfile,
   updateRelationshipPrefs,
   updateUserProfile,
+  getLoveStories,
+  createLoveStory,
+  getAnnouncements,
+  createAnnouncement,
+  getSuggestedProfiles,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -493,6 +498,21 @@ export const appRouter = router({
       }),
   }),
 
+  // ─── Home ────────────────────────────────────────────────────────────────
+  home: router({
+    suggestedProfiles: protectedProcedure.query(async ({ ctx }) => {
+      return getSuggestedProfiles(ctx.user.id, 8);
+    }),
+
+    loveStories: protectedProcedure.query(async () => {
+      return getLoveStories(10);
+    }),
+
+    announcements: protectedProcedure.query(async () => {
+      return getAnnouncements(10);
+    }),
+  }),
+
   // ─── Admin ────────────────────────────────────────────────────────────────
   admin: router({
     users: adminProcedure.query(async () => {
@@ -509,6 +529,25 @@ export const appRouter = router({
     payments: adminProcedure.query(async () => {
       return getAllPayments();
     }),
+
+    createAnnouncement: adminProcedure
+      .input(z.object({ title: z.string().min(1).max(256), content: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        return createAnnouncement({ title: input.title, content: input.content, adminId: ctx.user.id });
+      }),
+
+    createLoveStory: adminProcedure
+      .input(z.object({
+        coupleName: z.string().min(1).max(256),
+        location: z.string().min(1).max(256),
+        quoteTitle: z.string().min(1),
+        story: z.string().min(1),
+        photoUrl: z.string().optional(),
+        photoKey: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return createLoveStory(input);
+      }),
   }),
 });
 

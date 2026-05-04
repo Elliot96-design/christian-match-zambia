@@ -128,3 +128,30 @@ export const chatroomReactions = mysqlTable("chatroom_reactions", {
 
 export type ChatroomReaction = typeof chatroomReactions.$inferSelect;
 export type InsertChatroomReaction = typeof chatroomReactions.$inferInsert;
+
+// Love stories (admin-created success stories)
+export const loveStories = mysqlTable("love_stories", {
+  id: int("id").autoincrement().primaryKey(),
+  coupleName: varchar("coupleName", { length: 256 }).notNull(),
+  location: varchar("location", { length: 256 }).notNull(),
+  quoteTitle: text("quoteTitle").notNull(),
+  story: text("story").notNull(),
+  photoUrl: text("photoUrl"),
+  photoKey: text("photoKey"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type LoveStory = typeof loveStories.$inferSelect;
+export type InsertLoveStory = typeof loveStories.$inferInsert;
+
+// Admin announcements / updates
+export const announcements = mysqlTable("announcements", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content").notNull(),
+  adminId: int("adminId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Announcement = typeof announcements.$inferSelect;
+export type InsertAnnouncement = typeof announcements.$inferInsert;
