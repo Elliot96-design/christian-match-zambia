@@ -50,6 +50,13 @@
       "when": 1777851931079,
       "tag": "0006_spooky_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1777936647801,
+      "tag": "0007_happy_sebastian_shaw",
+      "breakpoints": true
     }
   ]
 }

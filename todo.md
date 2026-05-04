@@ -173,3 +173,23 @@
 - [x] Ensure Go Premium card routes to PremiumCheckoutModal
 - [x] Ensure K20 cards open PaymentModal for that user
 - [x] Ensure "Upgrade to Premium to chat" button opens PremiumCheckoutModal
+
+## IT Management Portal
+
+- [x] Generate cross/sunset background image for the IT Management Portal login page
+- [x] Build /admin-portal route: exact reference design (dark purple #0d0520 bg, gold accents)
+- [x] Portal header: English language selector (top right), heart+cross logo (gold), "Faithful Hearts" title, "IT MANAGEMENT PORTAL" subtitle (gold), divider with diamond, "Secure access for authorized administrators only." text
+- [x] Cross/sunset background image visible behind the text section
+- [x] Admin Access form card: shield+lock icon, "ADMIN ACCESS" title, "Please sign in to access your dashboard" subtitle
+- [x] Username field: person icon, gold "Username" label, "Enter username" placeholder
+- [x] Password field: lock icon, gold "Password" label, "Enter password" placeholder, eye-slash toggle
+- [x] Quick PIN field: shield icon, gold "Quick PIN" label, 4 individual PIN digit boxes (dots when filled)
+- [x] Remember me checkbox + "Forgot PIN or Password?" link (right-aligned, gold)
+- [x] Sign In button: full-width, purple gradient, "Sign In →" text
+- [x] Footer badges: Secure (Encrypted Access), Reliable (Role Based Access), Kingdom Driven (Purpose Focused)
+- [x] Copyright footer: "© 2025 Faithful Hearts. All rights reserved. ♡"
+- [x] Wire 6-tap gesture on Faithful Hearts logo in Browse header → navigate to /admin-portal
+- [x] Wire 6-tap gesture on Faithful Hearts logo in Home welcome screen → navigate to /admin-portal
+- [x] Remove admin panel link from user profile bottom nav / profile tab
+- [x] Admin portal sign-in logic: validate against users table (role=admin), create session, redirect to /admin
+- [x] Show error toast for invalid credentials on admin portal

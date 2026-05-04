@@ -43,6 +43,10 @@ export const users = mysqlTable("users", {
   lastSeen: timestamp("lastSeen").defaultNow().notNull(),
   occupation: varchar("occupation", { length: 128 }),
   isVerified: boolean("isVerified").default(false).notNull(),
+  // Admin portal credentials (only set for admin users)
+  adminUsername: varchar("adminUsername", { length: 64 }),
+  adminPasswordHash: text("adminPasswordHash"),
+  adminPin: varchar("adminPin", { length: 64 }), // bcrypt hash of 4-digit PIN
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

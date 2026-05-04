@@ -42,6 +42,7 @@ import {
   createAnnouncement,
   getSuggestedProfiles,
   getNotificationsForUser,
+  getAdminByUsername,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -63,6 +64,29 @@ export const appRouter = router({
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
       return { success: true } as const;
     }),
+    adminPortalLogin: publicProcedure
+      .input(z.object({ username: z.string().min(1), password: z.string().min(1), pin: z.string().length(4) }))
+      .mutation(async ({ input, ctx }) => {
+        const bcrypt = await import("bcryptjs");
+        const admin = await getAdminByUsername(input.username);
+        if (!admin || !admin.adminPasswordHash || !admin.adminPin) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+        }
+        const passwordOk = await bcrypt.compare(input.password, admin.adminPasswordHash);
+        if (!passwordOk) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
+        }
+        const pinOk = await bcrypt.compare(input.pin, admin.adminPin);
+        if (!pinOk) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid PIN" });
+        }
+        // Create a session for this admin
+        const { sdk } = await import("./_core/sdk");
+        const token = await sdk.createSessionToken(admin.openId, { name: admin.name ?? admin.adminUsername ?? "Admin" });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
+        return { success: true } as const;
+      }),
   }),
 
   // ─── Profile ──────────────────────────────────────────────────────────────

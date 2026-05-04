@@ -1,6 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { getLoginUrl } from "@/const";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { LOGO_URL } from "@/components/AppHeader";
 
@@ -47,6 +47,19 @@ const HOW_IT_WORKS = [
 export default function Home() {
   const { isAuthenticated, loading, user } = useAuth();
   const [, navigate] = useLocation();
+  const [logoTapCount, setLogoTapCount] = useState(0);
+  const logoTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleLogoTap = () => {
+    const next = logoTapCount + 1;
+    setLogoTapCount(next);
+    if (logoTapTimer.current) clearTimeout(logoTapTimer.current);
+    if (next >= 6) {
+      setLogoTapCount(0);
+      navigate("/admin-portal");
+    } else {
+      logoTapTimer.current = setTimeout(() => setLogoTapCount(0), 2000);
+    }
+  };
 
   useEffect(() => {
     if (!loading && isAuthenticated) {
@@ -70,7 +83,7 @@ export default function Home() {
       {/* ── Top bar ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between px-5 pt-4 pb-1 flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <img src={LOGO_URL} alt="Faithful Hearts" className="w-9 h-9 rounded-xl object-cover shadow-lg" />
+          <img src={LOGO_URL} alt="Faithful Hearts" className="w-9 h-9 rounded-xl object-cover shadow-lg cursor-pointer select-none" onClick={handleLogoTap} />
           <div>
             <p className="font-display font-bold text-white text-sm leading-tight">Faithful</p>
             <p className="font-display font-bold text-white text-sm leading-tight">Hearts</p>

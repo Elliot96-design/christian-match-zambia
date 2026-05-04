@@ -710,3 +710,29 @@ export async function getNotificationsForUser(userId: number): Promise<Notificat
   items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return items;
 }
+
+// ─── Admin Portal Auth ────────────────────────────────────────────────────────
+export async function getAdminByUsername(username: string): Promise<User | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(users)
+    .where(and(eq(users.adminUsername, username), eq(users.role, "admin")))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function setAdminCredentials(
+  userId: number,
+  username: string,
+  passwordHash: string,
+  pinHash: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(users)
+    .set({ adminUsername: username, adminPasswordHash: passwordHash, adminPin: pinHash })
+    .where(eq(users.id, userId));
+}

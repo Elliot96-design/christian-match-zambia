@@ -436,14 +436,7 @@ function ProfileTab({ user, onLogout, navigate, onTabChange }: {
               bg: "oklch(0.94 0.04 290)",
               onClick: () => toast.info("Help & Support coming soon"),
             },
-            ...(user.role === "admin" ? [{
-              icon: <Shield className="w-4.5 h-4.5" />,
-              label: "Admin Panel",
-              sub: "Manage users and payments",
-              color: "oklch(0.45 0.18 290)",
-              bg: "oklch(0.94 0.04 290)",
-              onClick: () => navigate("/admin"),
-            }] : []),
+
           ].map((item, i, arr) => (
             <button
               key={item.label}
@@ -613,6 +606,19 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
   const [showPayment, setShowPayment] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [isBanned, setIsBanned] = useState(false);
+  const [logoTapCount, setLogoTapCount] = useState(0);
+  const logoTapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleLogoTap = () => {
+    const next = logoTapCount + 1;
+    setLogoTapCount(next);
+    if (logoTapTimer.current) clearTimeout(logoTapTimer.current);
+    if (next >= 6) {
+      setLogoTapCount(0);
+      navigate("/admin-portal");
+    } else {
+      logoTapTimer.current = setTimeout(() => setLogoTapCount(0), 2000);
+    }
+  };
 
   // Derive active tab from URL query param
   const tabParam = new URLSearchParams(searchString).get("tab") as NavTab | null;
@@ -734,10 +740,10 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
             <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <div className="flex items-center gap-2">
+        <button onClick={handleLogoTap} className="flex items-center gap-2 cursor-pointer select-none" aria-label="Faithful Hearts">
           <img src={LOGO_URL} alt="" className="w-7 h-7 rounded-lg object-cover" />
           <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
-        </div>
+        </button>
         <div className="relative">
           <button
             onClick={() => setActiveTab("notifications")}
