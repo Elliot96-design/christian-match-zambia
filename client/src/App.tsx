@@ -17,6 +17,13 @@ import FaithProfile from "./pages/FaithProfile";
 import RelationshipPrefs from "./pages/RelationshipPrefs";
 import { Redirect } from "wouter";
 import AdminPortal from "./pages/AdminPortal";
+import FinanceAdmin from "./pages/admin/FinanceAdmin";
+import SupportAdmin from "./pages/admin/SupportAdmin";
+import SystemsAdmin from "./pages/admin/SystemsAdmin";
+import UserManagementAdmin from "./pages/admin/UserManagementAdmin";
+import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin";
+import RolesAdmin from "./pages/admin/RolesAdmin";
+import SuperAdmin from "./pages/admin/SuperAdmin";
 
 function Router() {
   return (
@@ -33,6 +40,13 @@ function Router() {
       <Route path="/chatroom" component={ChatroomPage} />
       <Route path="/admin" component={AdminPanel} />
       <Route path="/admin-portal" component={AdminPortal} />
+      <Route path="/admin/finance" component={FinanceAdmin} />
+      <Route path="/admin/support" component={SupportAdmin} />
+      <Route path="/admin/systems" component={SystemsAdmin} />
+      <Route path="/admin/users" component={UserManagementAdmin} />
+      <Route path="/admin/announcements" component={AnnouncementsAdmin} />
+      <Route path="/admin/roles" component={RolesAdmin} />
+      <Route path="/admin/super" component={SuperAdmin} />
       <Route path="/notifications">{() => <Redirect to="/browse?tab=notifications" />}</Route>
       <Route path="/messages">{() => <Redirect to="/browse?tab=messages" />}</Route>
       <Route path="/404" component={NotFound} />

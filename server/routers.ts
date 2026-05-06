@@ -43,6 +43,26 @@ import {
   getSuggestedProfiles,
   getNotificationsForUser,
   getAdminByUsername,
+  getAdminStats,
+  getAllSupportTickets,
+  createSupportTicket,
+  resolveTicket,
+  getAppSettings,
+  getAppSetting,
+  upsertAppSetting,
+  verifyUser,
+  getAllAdminAccounts,
+  updateAdminPanel,
+  updateAdminCredentialsFull,
+  getAllLoveStories,
+  deleteLoveStory,
+  updateLoveStory,
+  getAllAnnouncements,
+  deleteAnnouncement,
+  getChatroomMessagesAdmin,
+  deleteChatroomMessage,
+  getUsersWithDetails,
+  getPremiumPaymentsList,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -85,7 +105,7 @@ export const appRouter = router({
         const token = await sdk.createSessionToken(admin.openId, { name: admin.name ?? admin.adminUsername ?? "Admin" });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-        return { success: true } as const;
+        return { success: true, adminPanel: admin.adminPanel ?? "users" } as const;
       }),
   }),
 
@@ -565,7 +585,7 @@ export const appRouter = router({
         return createAnnouncement({ title: input.title, content: input.content, adminId: ctx.user.id });
       }),
 
-    createLoveStory: adminProcedure
+     createLoveStory: adminProcedure
       .input(z.object({
         coupleName: z.string().min(1).max(256),
         location: z.string().min(1).max(256),
@@ -577,7 +597,145 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return createLoveStory(input);
       }),
+    // ── Finance Admin ──────────────────────────────────────────────────────
+    stats: adminProcedure.query(async () => {
+      return getAdminStats();
+    }),
+    allPayments: adminProcedure.query(async () => {
+      return getPremiumPaymentsList();
+    }),
+    // ── Support Admin ──────────────────────────────────────────────────────
+    supportTickets: adminProcedure.query(async () => {
+      return getAllSupportTickets();
+    }),
+    resolveTicket: adminProcedure
+      .input(z.object({
+        ticketId: z.number().int(),
+        reply: z.string().min(1),
+        status: z.enum(["in_progress", "resolved", "closed"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        await resolveTicket(input.ticketId, ctx.user.id, input.reply, input.status);
+        return { success: true };
+      }),
+    chatroomMessages: adminProcedure.query(async () => {
+      return getChatroomMessagesAdmin(200);
+    }),
+    deleteChatroomMessage: adminProcedure
+      .input(z.object({ messageId: z.number().int() }))
+      .mutation(async ({ input }) => {
+        await deleteChatroomMessage(input.messageId);
+        return { success: true };
+      }),
+    // ── Systems & Settings Admin ───────────────────────────────────────────
+    appSettings: adminProcedure.query(async () => {
+      return getAppSettings();
+    }),
+    updateSetting: adminProcedure
+      .input(z.object({ key: z.string().min(1), value: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        await upsertAppSetting(input.key, input.value, ctx.user.id);
+        return { success: true };
+      }),
+    // ── User Management Admin ──────────────────────────────────────────────
+    usersDetailed: adminProcedure.query(async () => {
+      return getUsersWithDetails();
+    }),
+    verifyUser: adminProcedure
+      .input(z.object({ userId: z.number().int(), verified: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await verifyUser(input.userId, input.verified);
+        return { success: true };
+      }),
+    setPremium: adminProcedure
+      .input(z.object({ userId: z.number().int(), isPremium: z.boolean() }))
+      .mutation(async ({ input }) => {
+        await setUserPremium(input.userId, input.isPremium);
+        return { success: true };
+      }),
+    // ── Announcement Center ────────────────────────────────────────────────
+    allAnnouncements: adminProcedure.query(async () => {
+      return getAllAnnouncements();
+    }),
+    deleteAnnouncement: adminProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input }) => {
+        await deleteAnnouncement(input.id);
+        return { success: true };
+      }),
+    allLoveStories: adminProcedure.query(async () => {
+      return getAllLoveStories();
+    }),
+    deleteLoveStory: adminProcedure
+      .input(z.object({ id: z.number().int() }))
+      .mutation(async ({ input }) => {
+        await deleteLoveStory(input.id);
+        return { success: true };
+      }),
+    updateLoveStory: adminProcedure
+      .input(z.object({
+        id: z.number().int(),
+        coupleName: z.string().optional(),
+        location: z.string().optional(),
+        quoteTitle: z.string().optional(),
+        story: z.string().optional(),
+        photoUrl: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await updateLoveStory(id, data);
+        return { success: true };
+      }),
+    // ── Role & Credentials Management ─────────────────────────────────────
+    allAdmins: adminProcedure.query(async () => {
+      return getAllAdminAccounts();
+    }),
+    updateAdminCredentials: adminProcedure
+      .input(z.object({
+        userId: z.number().int(),
+        adminUsername: z.string().min(1).max(64).optional(),
+        newPassword: z.string().min(6).optional(),
+        newPin: z.string().length(4).regex(/^\d{4}$/).optional(),
+        adminPanel: z.enum(["finance", "support", "systems", "users", "announcements", "roles", "super"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const bcrypt = await import("bcryptjs");
+        const updates: { adminUsername?: string; adminPasswordHash?: string; adminPin?: string; adminPanel?: string } = {};
+        if (input.adminUsername) updates.adminUsername = input.adminUsername;
+        if (input.newPassword) updates.adminPasswordHash = await bcrypt.hash(input.newPassword, 10);
+        if (input.newPin) updates.adminPin = await bcrypt.hash(input.newPin, 10);
+        if (input.adminPanel) updates.adminPanel = input.adminPanel;
+        await updateAdminCredentialsFull(input.userId, updates);
+        return { success: true };
+      }),
+    promoteToAdmin: adminProcedure
+      .input(z.object({
+        userId: z.number().int(),
+        adminUsername: z.string().min(1).max(64),
+        password: z.string().min(6),
+        pin: z.string().length(4).regex(/^\d{4}$/),
+        adminPanel: z.enum(["finance", "support", "systems", "users", "announcements", "roles", "super"]),
+      }))
+      .mutation(async ({ input }) => {
+        const bcrypt = await import("bcryptjs");
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        const pinHash = await bcrypt.hash(input.pin, 10);
+        await updateAdminCredentialsFull(input.userId, {
+          adminUsername: input.adminUsername,
+          adminPasswordHash: passwordHash,
+          adminPin: pinHash,
+          adminPanel: input.adminPanel,
+        });
+        // Also set role to admin
+        const { db: _db } = await import("./db").then(m => ({ db: m.getDb }));
+        const db = await _db();
+        if (db) {
+          const { users: usersTable } = await import("../drizzle/schema");
+          const { eq } = await import("drizzle-orm");
+          await db.update(usersTable).set({ role: "admin" }).where(eq(usersTable.id, input.userId));
+        }
+        return { success: true };
+      }),
   }),
 });
-
 export type AppRouter = typeof appRouter;

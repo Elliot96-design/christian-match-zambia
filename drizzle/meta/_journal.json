@@ -57,6 +57,13 @@
       "when": 1777936647801,
       "tag": "0007_happy_sebastian_shaw",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "5",
+      "when": 1778026324676,
+      "tag": "0008_overconfident_grandmaster",
+      "breakpoints": true
     }
   ]
 }

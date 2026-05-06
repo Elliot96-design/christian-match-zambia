@@ -1,16 +1,27 @@
 import { and, desc, eq, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
+  Announcement,
+  AppSetting,
   ChatUnlock,
+  InsertAnnouncement,
   InsertChatUnlock,
+  InsertLoveStory,
   InsertMessage,
+  InsertSupportTicket,
   InsertUser,
   InsertUserPhoto,
+  LoveStory,
   Message,
+  SupportTicket,
   User,
   UserPhoto,
+  announcements,
+  appSettings,
   chatUnlocks,
+  loveStories,
   messages,
+  supportTickets,
   userPhotos,
   users,
 } from "../drizzle/schema";
@@ -570,16 +581,7 @@ export async function getFaithProfile(userId: number): Promise<{
   return result[0];
 }
 
-// ─── Love Stories ─────────────────────────────────────────────────────────────
-
-import {
-  Announcement,
-  InsertAnnouncement,
-  InsertLoveStory,
-  LoveStory,
-  announcements,
-  loveStories,
-} from "../drizzle/schema";
+// ─── Love Stories ─────────────────────────────────────────────────────────────;
 
 export async function getLoveStories(limit = 10): Promise<LoveStory[]> {
   const db = await getDb();
@@ -735,4 +737,251 @@ export async function setAdminCredentials(
     .update(users)
     .set({ adminUsername: username, adminPasswordHash: passwordHash, adminPin: pinHash })
     .where(eq(users.id, userId));
+}
+
+// ─── Admin Panel Helpers ──────────────────────────────────────────────────────
+
+export async function getAdminStats(): Promise<{
+  totalUsers: number;
+  premiumUsers: number;
+  totalRevenue: number;
+  chatUnlockRevenue: number;
+  premiumRevenue: number;
+  totalPayments: number;
+  openTickets: number;
+  bannedUsers: number;
+  verifiedUsers: number;
+  newUsersToday: number;
+}> {
+  const db = await getDb();
+  if (!db) return { totalUsers: 0, premiumUsers: 0, totalRevenue: 0, chatUnlockRevenue: 0, premiumRevenue: 0, totalPayments: 0, openTickets: 0, bannedUsers: 0, verifiedUsers: 0, newUsersToday: 0 };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const [allUsers, allPayments, allTickets] = await Promise.all([
+    db.select().from(users),
+    db.select().from(chatUnlocks).where(eq(chatUnlocks.status, "completed")),
+    db.select().from(supportTickets),
+  ]);
+  const premiumUsers = allUsers.filter(u => u.isPremium).length;
+  const bannedUsers = allUsers.filter(u => u.isBanned).length;
+  const verifiedUsers = allUsers.filter(u => u.isVerified).length;
+  const newUsersToday = allUsers.filter(u => u.createdAt >= today).length;
+  const chatUnlockRevenue = allPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
+  const premiumRevenue = premiumUsers * 50; // K50 first month estimate
+  const openTickets = allTickets.filter(t => t.status === "open" || t.status === "in_progress").length;
+  return {
+    totalUsers: allUsers.length,
+    premiumUsers,
+    totalRevenue: chatUnlockRevenue + premiumRevenue,
+    chatUnlockRevenue,
+    premiumRevenue,
+    totalPayments: allPayments.length,
+    openTickets,
+    bannedUsers,
+    verifiedUsers,
+    newUsersToday,
+  };
+}
+
+export async function getAllSupportTickets(): Promise<(SupportTicket & { userName: string | null; userEmail: string | null })[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: supportTickets.id,
+      userId: supportTickets.userId,
+      subject: supportTickets.subject,
+      message: supportTickets.message,
+      status: supportTickets.status,
+      adminReply: supportTickets.adminReply,
+      adminId: supportTickets.adminId,
+      createdAt: supportTickets.createdAt,
+      updatedAt: supportTickets.updatedAt,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(supportTickets)
+    .leftJoin(users, eq(supportTickets.userId, users.id))
+    .orderBy(desc(supportTickets.createdAt));
+  return rows as (SupportTicket & { userName: string | null; userEmail: string | null })[];
+}
+
+export async function createSupportTicket(data: InsertSupportTicket): Promise<SupportTicket> {
+  const db = await getDb();
+  if (!db) throw new Error("DB unavailable");
+  const [result] = await db.insert(supportTickets).values(data).$returningId();
+  const rows = await db.select().from(supportTickets).where(eq(supportTickets.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function resolveTicket(ticketId: number, adminId: number, reply: string, status: "in_progress" | "resolved" | "closed"): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(supportTickets).set({ adminReply: reply, adminId, status }).where(eq(supportTickets.id, ticketId));
+}
+
+export async function getAppSettings(): Promise<AppSetting[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(appSettings).orderBy(appSettings.settingKey);
+}
+
+export async function getAppSetting(key: string): Promise<string | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db.select().from(appSettings).where(eq(appSettings.settingKey, key)).limit(1);
+  return rows[0]?.settingValue ?? null;
+}
+
+export async function upsertAppSetting(key: string, value: string, updatedBy?: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await db.select().from(appSettings).where(eq(appSettings.settingKey, key)).limit(1);
+  if (existing.length > 0) {
+    await db.update(appSettings).set({ settingValue: value, updatedBy: updatedBy ?? null }).where(eq(appSettings.settingKey, key));
+  } else {
+    await db.insert(appSettings).values({ settingKey: key, settingValue: value, updatedBy: updatedBy ?? null });
+  }
+}
+
+export async function verifyUser(userId: number, verified: boolean): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ isVerified: verified }).where(eq(users.id, userId));
+}
+
+export async function getAllAdminAccounts(): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).where(eq(users.role, "admin")).orderBy(desc(users.createdAt));
+}
+
+export async function updateAdminPanel(userId: number, panel: string): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ adminPanel: panel as User["adminPanel"] }).where(eq(users.id, userId));
+}
+
+export async function updateAdminCredentialsFull(
+  userId: number,
+  updates: { adminUsername?: string; adminPasswordHash?: string; adminPin?: string; adminPanel?: string }
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const set: Partial<User> = {};
+  if (updates.adminUsername !== undefined) set.adminUsername = updates.adminUsername;
+  if (updates.adminPasswordHash !== undefined) set.adminPasswordHash = updates.adminPasswordHash;
+  if (updates.adminPin !== undefined) set.adminPin = updates.adminPin;
+  if (updates.adminPanel !== undefined) set.adminPanel = updates.adminPanel as User["adminPanel"];
+  if (Object.keys(set).length > 0) {
+    await db.update(users).set(set).where(eq(users.id, userId));
+  }
+}
+
+export async function getAllLoveStories(): Promise<LoveStory[]> {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(loveStories).orderBy(desc(loveStories.createdAt));
+}
+
+export async function deleteLoveStory(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(loveStories).where(eq(loveStories.id, id));
+}
+
+export async function updateLoveStory(id: number, data: Partial<InsertLoveStory>): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(loveStories).set(data).where(eq(loveStories.id, id));
+}
+
+export async function getAllAnnouncements(): Promise<(typeof announcements.$inferSelect & { adminName: string | null })[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: announcements.id,
+      title: announcements.title,
+      content: announcements.content,
+      adminId: announcements.adminId,
+      createdAt: announcements.createdAt,
+      adminName: users.name,
+    })
+    .from(announcements)
+    .leftJoin(users, eq(announcements.adminId, users.id))
+    .orderBy(desc(announcements.createdAt));
+  return rows as (typeof announcements.$inferSelect & { adminName: string | null })[];
+}
+
+export async function deleteAnnouncement(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcements).where(eq(announcements.id, id));
+}
+
+export async function getChatroomMessagesAdmin(limit = 100): Promise<(typeof import("../drizzle/schema").chatroomMessages.$inferSelect & { userName: string | null })[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const { chatroomMessages } = await import("../drizzle/schema");
+  const rows = await db
+    .select({
+      id: chatroomMessages.id,
+      userId: chatroomMessages.userId,
+      content: chatroomMessages.content,
+      messageType: chatroomMessages.messageType,
+      category: chatroomMessages.category,
+      createdAt: chatroomMessages.createdAt,
+      userName: users.name,
+    })
+    .from(chatroomMessages)
+    .leftJoin(users, eq(chatroomMessages.userId, users.id))
+    .orderBy(desc(chatroomMessages.createdAt))
+    .limit(limit);
+  return rows as (typeof chatroomMessages.$inferSelect & { userName: string | null })[];
+}
+
+export async function deleteChatroomMessage(id: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const { chatroomMessages } = await import("../drizzle/schema");
+  await db.delete(chatroomMessages).where(eq(chatroomMessages.id, id));
+}
+
+export async function getUsersWithDetails(): Promise<(User & { photoCount: number; messageCount: number })[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
+  const photoCounts = await db
+    .select({ userId: userPhotos.userId, count: sql<number>`count(*)` })
+    .from(userPhotos)
+    .groupBy(userPhotos.userId);
+  const photoMap = new Map(photoCounts.map(p => [p.userId, Number(p.count)]));
+  return allUsers.map(u => ({
+    ...u,
+    photoCount: photoMap.get(u.id) ?? 0,
+    messageCount: 0,
+  }));
+}
+
+export async function getPremiumPaymentsList(): Promise<{
+  id: number; userId: number; userName: string | null; amount: number; provider: string; status: string; createdAt: Date;
+}[]> {
+  const db = await getDb();
+  if (!db) return [];
+  // Use chatUnlocks as the payment source (both K20 unlocks and premium)
+  const rows = await db
+    .select({
+      id: chatUnlocks.id,
+      userId: chatUnlocks.payerId,
+      userName: users.name,
+      amount: chatUnlocks.amount,
+      provider: chatUnlocks.provider,
+      status: chatUnlocks.status,
+      createdAt: chatUnlocks.createdAt,
+    })
+    .from(chatUnlocks)
+    .leftJoin(users, eq(chatUnlocks.payerId, users.id))
+    .orderBy(desc(chatUnlocks.createdAt));
+  return rows as { id: number; userId: number; userName: string | null; amount: number; provider: string; status: string; createdAt: Date }[];
 }

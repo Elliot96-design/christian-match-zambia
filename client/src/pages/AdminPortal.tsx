@@ -22,9 +22,18 @@ export default function AdminPortal() {
   ];
 
   const loginMutation = trpc.auth.adminPortalLogin.useMutation({
-    onSuccess: () => {
-      toast.success("Welcome back — redirecting to admin dashboard...");
-      navigate("/admin");
+    onSuccess: (data) => {
+      toast.success("Welcome back — redirecting to your dashboard...");
+      const panelRoutes: Record<string, string> = {
+        finance: "/admin/finance",
+        support: "/admin/support",
+        systems: "/admin/systems",
+        users: "/admin/users",
+        announcements: "/admin/announcements",
+        roles: "/admin/roles",
+        super: "/admin/super",
+      };
+      navigate(panelRoutes[data.adminPanel] ?? "/admin/super");
     },
     onError: (err: { message: string }) => {
       toast.error(err.message || "Access Denied");

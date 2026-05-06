@@ -193,3 +193,23 @@
 - [x] Remove admin panel link from user profile bottom nav / profile tab
 - [x] Admin portal sign-in logic: validate against users table (role=admin), create session, redirect to /admin
 - [x] Show error toast for invalid credentials on admin portal
+
+## Admin Backend Panels (7 Panels)
+
+- [ ] Add adminPanel enum to users schema (finance, support, systems, users, announcements, roles, super)
+- [ ] Add supportTickets table (id, userId, subject, message, status, adminReply, createdAt)
+- [ ] Add appSettings table (id, key, value, updatedAt, updatedBy)
+- [ ] Push schema changes to DB
+- [ ] Add DB helpers: getAdminStats, getSupportTickets, getAppSettings, upsertAppSetting, createSupportTicket, resolveTicket, verifyUser, getAllAdmins, createAdminAccount, updateAdminCredentials
+- [ ] Add admin.financeStats, admin.supportTickets, admin.appSettings, admin.updateSetting, admin.verifyUser, admin.allAdmins, admin.createAdminAccount, admin.updateAdminCredentials tRPC procedures
+- [ ] Seed 7 admin accounts with hardcoded credentials (finance/support/systems/users/announcements/roles/super)
+- [ ] Build FinanceAdmin panel: revenue stats, payment history table, premium subscriptions list, K20 unlock records
+- [ ] Build SupportAdmin panel: user reports, ban/unban, chatroom moderation, prayer request queue, support tickets
+- [ ] Build SystemsSettings panel: welcome screen text, home screen tagline, app name, bottom nav labels, bible verse editor, app settings CRUD
+- [ ] Build UserManagement panel: user list with search/filter, verify/suspend, profile completeness, photo review
+- [ ] Build AnnouncementCenter panel: post announcements, manage love stories (create/edit/delete), content moderation
+- [ ] Build RoleCredentials panel: list all admins, create new admin, set username/password/PIN, assign panel role
+- [ ] Build SuperAdmin panel: full dashboard with all stats, links to all panels, override controls
+- [ ] Wire AdminPortal login: route to correct panel based on adminPanel field after login
+- [ ] Remove old /admin route (replace with panel-specific routes)
+- [ ] Ensure all admin panels are only accessible via /admin-portal login (no direct route access)
