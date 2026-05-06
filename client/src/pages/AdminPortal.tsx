@@ -24,6 +24,11 @@ export default function AdminPortal() {
   const loginMutation = trpc.auth.adminPortalLogin.useMutation({
     onSuccess: (data) => {
       toast.success("Welcome back — redirecting to your dashboard...");
+      // Store admin session in localStorage for AdminGuard
+      const ttl = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000; // 7 days or 8 hours
+      localStorage.setItem("adminSessionToken", data.adminPanel);
+      localStorage.setItem("adminSessionExpiry", String(Date.now() + ttl));
+      localStorage.setItem("adminPanel", data.adminPanel);
       const panelRoutes: Record<string, string> = {
         finance: "/admin/finance",
         support: "/admin/support",

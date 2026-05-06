@@ -32,6 +32,9 @@ export default function AdminShell({ panelId, title, subtitle, children }: Admin
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
+      localStorage.removeItem("adminSessionToken");
+      localStorage.removeItem("adminSessionExpiry");
+      localStorage.removeItem("adminPanel");
       toast.success("Logged out of admin portal");
       navigate("/admin-portal");
     },

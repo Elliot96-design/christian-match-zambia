@@ -63,6 +63,9 @@ import {
   deleteChatroomMessage,
   getUsersWithDetails,
   getPremiumPaymentsList,
+  updateAnnouncementById,
+  forceCancelUserPremium,
+  clearAllAnnouncementsDb,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -706,6 +709,30 @@ export const appRouter = router({
         if (input.newPin) updates.adminPin = await bcrypt.hash(input.newPin, 10);
         if (input.adminPanel) updates.adminPanel = input.adminPanel;
         await updateAdminCredentialsFull(input.userId, updates);
+        return { success: true };
+      }),
+    updateAnnouncement: adminProcedure
+      .input(z.object({
+        id: z.number().int(),
+        title: z.string().min(1).optional(),
+        content: z.string().min(1).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const updates: { title?: string; content?: string } = {};
+        if (input.title) updates.title = input.title;
+        if (input.content) updates.content = input.content;
+        await updateAnnouncementById(input.id, updates);
+        return { success: true };
+      }),
+    forceCancelPremium: adminProcedure
+      .input(z.object({ userId: z.number().int() }))
+      .mutation(async ({ input }) => {
+        await forceCancelUserPremium(input.userId);
+        return { success: true };
+      }),
+    clearAllAnnouncements: adminProcedure
+      .mutation(async () => {
+        await clearAllAnnouncementsDb();
         return { success: true };
       }),
     promoteToAdmin: adminProcedure

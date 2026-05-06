@@ -196,20 +196,32 @@
 
 ## Admin Backend Panels (7 Panels)
 
-- [ ] Add adminPanel enum to users schema (finance, support, systems, users, announcements, roles, super)
-- [ ] Add supportTickets table (id, userId, subject, message, status, adminReply, createdAt)
-- [ ] Add appSettings table (id, key, value, updatedAt, updatedBy)
-- [ ] Push schema changes to DB
-- [ ] Add DB helpers: getAdminStats, getSupportTickets, getAppSettings, upsertAppSetting, createSupportTicket, resolveTicket, verifyUser, getAllAdmins, createAdminAccount, updateAdminCredentials
-- [ ] Add admin.financeStats, admin.supportTickets, admin.appSettings, admin.updateSetting, admin.verifyUser, admin.allAdmins, admin.createAdminAccount, admin.updateAdminCredentials tRPC procedures
-- [ ] Seed 7 admin accounts with hardcoded credentials (finance/support/systems/users/announcements/roles/super)
-- [ ] Build FinanceAdmin panel: revenue stats, payment history table, premium subscriptions list, K20 unlock records
-- [ ] Build SupportAdmin panel: user reports, ban/unban, chatroom moderation, prayer request queue, support tickets
-- [ ] Build SystemsSettings panel: welcome screen text, home screen tagline, app name, bottom nav labels, bible verse editor, app settings CRUD
-- [ ] Build UserManagement panel: user list with search/filter, verify/suspend, profile completeness, photo review
-- [ ] Build AnnouncementCenter panel: post announcements, manage love stories (create/edit/delete), content moderation
-- [ ] Build RoleCredentials panel: list all admins, create new admin, set username/password/PIN, assign panel role
-- [ ] Build SuperAdmin panel: full dashboard with all stats, links to all panels, override controls
-- [ ] Wire AdminPortal login: route to correct panel based on adminPanel field after login
-- [ ] Remove old /admin route (replace with panel-specific routes)
-- [ ] Ensure all admin panels are only accessible via /admin-portal login (no direct route access)
+- [x] Add adminPanel enum to users schema (finance, support, systems, users, announcements, roles, super)
+- [x] Add supportTickets table (id, userId, subject, message, status, adminReply, createdAt)
+- [x] Add appSettings table (id, key, value, updatedAt, updatedBy)
+- [x] Push schema changes to DB
+- [x] Add DB helpers: getAdminStats, getSupportTickets, getAppSettings, upsertAppSetting, createSupportTicket, resolveTicket, verifyUser, getAllAdmins, createAdminAccount, updateAdminCredentials
+- [x] Add admin.financeStats, admin.supportTickets, admin.appSettings, admin.updateSetting, admin.verifyUser, admin.allAdmins, admin.createAdminAccount, admin.updateAdminCredentials tRPC procedures
+- [x] Seed 7 admin accounts with hardcoded credentials (finance/support/systems/users/announcements/roles/super)
+- [x] Build FinanceAdmin panel: revenue stats, payment history table, premium subscriptions list, K20 unlock records
+- [x] Build SupportAdmin panel: user reports, ban/unban, chatroom moderation, prayer request queue, support tickets
+- [x] Build SystemsSettings panel: welcome screen text, home screen tagline, app name, bottom nav labels, bible verse editor, app settings CRUD
+- [x] Build UserManagement panel: user list with search/filter, verify/suspend, profile completeness, photo review
+- [x] Build AnnouncementCenter panel: post announcements, manage love stories (create/edit/delete), content moderation
+- [x] Build RoleCredentials panel: list all admins, create new admin, set username/password/PIN, assign panel role
+- [x] Build SuperAdmin panel: full dashboard with all stats, links to all panels, override controls
+- [x] Wire AdminPortal login: route to correct panel based on adminPanel field after login
+- [x] Remove old /admin route (replace with panel-specific routes)
+- [x] Ensure all admin panels are only accessible via /admin-portal login (no direct route access)
+
+## Admin Panel Hardening (Gap Fixes)
+
+- [x] Add AdminGuard component: redirect unauthenticated users from /admin/* to /admin-portal
+- [x] Remove legacy /admin route from App.tsx
+- [x] Add announcement edit (update title/content) action in AnnouncementsAdmin
+- [x] Add love story edit action in AnnouncementsAdmin
+- [x] Add credential update (change password/PIN) in RolesAdmin
+- [x] Add Super Admin override controls: force-ban user, force-cancel premium, clear all announcements
+- [x] Add updateAnnouncementById, forceCancelUserPremium, clearAllAnnouncementsDb db helpers
+- [x] Import and wire 3 new helpers in routers.ts (updateAnnouncement, forceCancelPremium, clearAllAnnouncements procedures)
+- [x] TypeScript: 0 errors, Tests: 17/17 pass

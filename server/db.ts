@@ -985,3 +985,26 @@ export async function getPremiumPaymentsList(): Promise<{
     .orderBy(desc(chatUnlocks.createdAt));
   return rows as { id: number; userId: number; userName: string | null; amount: number; provider: string; status: string; createdAt: Date }[];
 }
+
+// ── Admin override helpers ────────────────────────────────────────────────────
+
+export async function updateAnnouncementById(
+  id: number,
+  updates: { title?: string; content?: string }
+) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(announcements).set(updates).where(eq(announcements.id, id));
+}
+
+export async function forceCancelUserPremium(userId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ isPremium: false }).where(eq(users.id, userId));
+}
+
+export async function clearAllAnnouncementsDb() {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(announcements);
+}
