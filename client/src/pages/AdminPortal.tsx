@@ -1,19 +1,44 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Globe, User, Lock, Shield, Eye, EyeOff, ChevronRight, Crown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
-const CROSS_BG = "https://d2xsxph8kpxj0f.cloudfront.net/310519663207673551/H429gEWUZrF7HRGamYp8WC/admin-portal-cross-bg-V8d6sXFsGrR9XmxNcHwQGe.webp";
+const CROSS_BG =
+  "https://d2xsxph8kpxj0f.cloudfront.net/310519663207673551/H429gEWUZrF7HRGamYp8WC/admin-portal-cross-bg-V8d6sXFsGrR9XmxNcHwQGe.webp";
+
+const PANEL_ROUTES: Record<string, string> = {
+  finance: "/admin/finance",
+  support: "/admin/support",
+  systems: "/admin/systems",
+  users: "/admin/users",
+  announcements: "/admin/announcements",
+  roles: "/admin/roles",
+  super: "/admin/super",
+};
+
+function storeAdminSession(adminPanel: string, rememberMe: boolean) {
+  const ttl = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+  localStorage.setItem("adminSessionToken", adminPanel);
+  localStorage.setItem("adminSessionExpiry", String(Date.now() + ttl));
+  localStorage.setItem("adminPanel", adminPanel);
+}
 
 export default function AdminPortal() {
   const [, navigate] = useLocation();
+
+  // ── Login mode: "credentials" (username+password) or "pin" (PIN only) ──────
+  const [mode, setMode] = useState<"credentials" | "pin">("credentials");
+
+  // Credentials mode state
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [pin, setPin] = useState(["", "", "", ""]);
   const [rememberMe, setRememberMe] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // PIN mode state
+  const [pin, setPin] = useState(["", "", "", ""]);
+  const [pinLoading, setPinLoading] = useState(false);
   const pinRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -21,31 +46,37 @@ export default function AdminPortal() {
     useRef<HTMLInputElement>(null),
   ];
 
+  const [isLoading, setIsLoading] = useState(false);
+
+  // ── Username + password mutation ────────────────────────────────────────────
   const loginMutation = trpc.auth.adminPortalLogin.useMutation({
     onSuccess: (data) => {
+      storeAdminSession(data.adminPanel, rememberMe);
       toast.success("Welcome back — redirecting to your dashboard...");
-      // Store admin session in localStorage for AdminGuard
-      const ttl = rememberMe ? 7 * 24 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000; // 7 days or 8 hours
-      localStorage.setItem("adminSessionToken", data.adminPanel);
-      localStorage.setItem("adminSessionExpiry", String(Date.now() + ttl));
-      localStorage.setItem("adminPanel", data.adminPanel);
-      const panelRoutes: Record<string, string> = {
-        finance: "/admin/finance",
-        support: "/admin/support",
-        systems: "/admin/systems",
-        users: "/admin/users",
-        announcements: "/admin/announcements",
-        roles: "/admin/roles",
-        super: "/admin/super",
-      };
-      navigate(panelRoutes[data.adminPanel] ?? "/admin/super");
+      navigate(PANEL_ROUTES[data.adminPanel] ?? "/admin/super");
     },
     onError: (err: { message: string }) => {
-      toast.error(err.message || "Access Denied");
+      toast.error(err.message || "Invalid credentials. Please try again.");
       setIsLoading(false);
     },
   });
 
+  // ── PIN-only mutation ───────────────────────────────────────────────────────
+  const pinLoginMutation = trpc.auth.adminPortalLoginByPin.useMutation({
+    onSuccess: (data) => {
+      storeAdminSession(data.adminPanel, false);
+      toast.success("PIN accepted — redirecting...");
+      navigate(PANEL_ROUTES[data.adminPanel] ?? "/admin/super");
+    },
+    onError: (err: { message: string }) => {
+      toast.error(err.message || "Invalid PIN. Please try again.");
+      setPin(["", "", "", ""]);
+      setPinLoading(false);
+      pinRefs[0].current?.focus();
+    },
+  });
+
+  // ── PIN input handlers ──────────────────────────────────────────────────────
   const handlePinChange = useCallback(
     (index: number, value: string) => {
       if (!/^\d?$/.test(value)) return;
@@ -68,6 +99,16 @@ export default function AdminPortal() {
     [pin]
   );
 
+  // Auto-submit when all 4 PIN digits are entered
+  useEffect(() => {
+    const code = pin.join("");
+    if (code.length === 4 && mode === "pin" && !pinLoading) {
+      setPinLoading(true);
+      pinLoginMutation.mutate({ pin: code });
+    }
+  }, [pin, mode]);
+
+  // ── Credentials sign-in handler ─────────────────────────────────────────────
   const handleSignIn = () => {
     if (!username.trim()) {
       toast.error("Please enter your admin username.");
@@ -77,13 +118,22 @@ export default function AdminPortal() {
       toast.error("Please enter your password.");
       return;
     }
-    const pinCode = pin.join("");
-    if (pinCode.length < 4) {
-      toast.error("Please enter your 4-digit Quick PIN.");
-      return;
-    }
     setIsLoading(true);
-    loginMutation.mutate({ username, password, pin: pinCode });
+    loginMutation.mutate({ username: username.trim(), password });
+  };
+
+  // ── Switch mode ─────────────────────────────────────────────────────────────
+  const switchToPin = () => {
+    setMode("pin");
+    setPin(["", "", "", ""]);
+    setPinLoading(false);
+    setTimeout(() => pinRefs[0].current?.focus(), 100);
+  };
+
+  const switchToCredentials = () => {
+    setMode("credentials");
+    setPin(["", "", "", ""]);
+    setPinLoading(false);
   };
 
   return (
@@ -100,9 +150,9 @@ export default function AdminPortal() {
         </button>
       </div>
 
-      {/* Hero section: logo + title + cross bg */}
+      {/* Hero section */}
       <div className="relative flex flex-col items-center px-6 pb-0">
-        {/* Heart+cross logo */}
+        {/* Heart + cross logo */}
         <div className="mb-4">
           <svg width="90" height="90" viewBox="0 0 90 90" fill="none">
             <path
@@ -128,7 +178,6 @@ export default function AdminPortal() {
         <p className="text-sm font-bold tracking-[0.25em] text-yellow-400 uppercase mb-2">
           IT Management Portal
         </p>
-        {/* Gold divider with diamond */}
         <div className="flex items-center gap-2 mb-4">
           <div className="h-px w-16 bg-gradient-to-r from-transparent to-yellow-400" />
           <div className="w-2 h-2 bg-yellow-400 rotate-45" />
@@ -143,20 +192,23 @@ export default function AdminPortal() {
           <img
             src={CROSS_BG}
             alt="Cross at sunset"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover"
             style={{ objectPosition: "center 40%" }}
           />
         </div>
       </div>
 
       {/* Admin Access Form Card */}
-      <div className="mx-4 mb-6 rounded-2xl border border-purple-500/30 p-6"
-        style={{ background: "rgba(30, 15, 60, 0.85)", backdropFilter: "blur(12px)" }}>
-
+      <div
+        className="mx-4 mb-6 rounded-2xl border border-purple-500/30 p-6"
+        style={{ background: "rgba(30, 15, 60, 0.85)", backdropFilter: "blur(12px)" }}
+      >
         {/* Card header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center"
-            style={{ background: "rgba(139, 92, 246, 0.2)", border: "1.5px solid rgba(139, 92, 246, 0.4)" }}>
+        <div className="flex items-center gap-3 mb-5">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(139, 92, 246, 0.2)", border: "1.5px solid rgba(139, 92, 246, 0.4)" }}
+          >
             <Shield className="w-6 h-6 text-yellow-400" />
           </div>
           <div>
@@ -165,118 +217,173 @@ export default function AdminPortal() {
           </div>
         </div>
 
-        {/* Username field */}
-        <div className="mb-4 rounded-xl border border-purple-500/30 px-4 py-3"
-          style={{ background: "rgba(255,255,255,0.04)" }}>
-          <label className="text-yellow-400 text-xs font-semibold block mb-1">Username</label>
-          <div className="flex items-center gap-3">
-            <User className="w-4 h-4 text-white/40 flex-shrink-0" />
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter username"
-              className="flex-1 bg-transparent text-white placeholder-white/30 text-sm outline-none"
-              autoComplete="username"
-            />
-          </div>
-        </div>
-
-        {/* Password field */}
-        <div className="mb-4 rounded-xl border border-purple-500/30 px-4 py-3"
-          style={{ background: "rgba(255,255,255,0.04)" }}>
-          <label className="text-yellow-400 text-xs font-semibold block mb-1">Password</label>
-          <div className="flex items-center gap-3">
-            <Lock className="w-4 h-4 text-white/40 flex-shrink-0" />
-            <input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter password"
-              className="flex-1 bg-transparent text-white placeholder-white/30 text-sm outline-none"
-              autoComplete="current-password"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="text-white/40 hover:text-white/70 transition-colors"
-            >
-              {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Quick PIN field */}
-        <div className="mb-5 rounded-xl border border-purple-500/30 px-4 py-3"
-          style={{ background: "rgba(255,255,255,0.04)" }}>
-          <label className="text-yellow-400 text-xs font-semibold block mb-2">Quick PIN</label>
-          <div className="flex items-center gap-3">
-            <Shield className="w-4 h-4 text-white/40 flex-shrink-0" />
-            <div className="flex gap-3">
-              {pin.map((digit, i) => (
-                <div
-                  key={i}
-                  className="w-11 h-11 rounded-lg border border-purple-500/40 flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.06)" }}
-                >
-                  <input
-                    ref={pinRefs[i]}
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={1}
-                    value={digit}
-                    onChange={(e) => handlePinChange(i, e.target.value)}
-                    onKeyDown={(e) => handlePinKeyDown(i, e)}
-                    className="w-full h-full bg-transparent text-white text-center text-lg font-bold outline-none"
-                    style={{ caretColor: "transparent" }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Remember me + Forgot */}
-        <div className="flex items-center justify-between mb-6">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <div
-              onClick={() => setRememberMe((v) => !v)}
-              className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
-                rememberMe ? "bg-purple-600 border-purple-600" : "border-white/30 bg-transparent"
-              }`}
-            >
-              {rememberMe && (
-                <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              )}
-            </div>
-            <span className="text-white/70 text-sm">Remember me</span>
-          </label>
-          <button className="text-purple-400 text-sm font-medium hover:text-purple-300 transition-colors">
-            Forgot PIN or Password?
+        {/* Mode toggle tabs */}
+        <div className="flex rounded-xl overflow-hidden border border-purple-500/30 mb-5">
+          <button
+            onClick={switchToCredentials}
+            className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+              mode === "credentials"
+                ? "bg-purple-700 text-white"
+                : "bg-transparent text-white/50 hover:text-white/80"
+            }`}
+          >
+            Username & Password
+          </button>
+          <button
+            onClick={switchToPin}
+            className={`flex-1 py-2.5 text-sm font-semibold transition-colors ${
+              mode === "pin"
+                ? "bg-purple-700 text-white"
+                : "bg-transparent text-white/50 hover:text-white/80"
+            }`}
+          >
+            Quick PIN
           </button>
         </div>
 
-        {/* Sign In button */}
-        <button
-          onClick={handleSignIn}
-          disabled={isLoading}
-          className="w-full py-4 rounded-xl text-white font-bold text-base flex items-center justify-center gap-2 transition-opacity disabled:opacity-70"
-          style={{
-            background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 50%, #4c1d95 100%)",
-            border: "1px solid rgba(139, 92, 246, 0.4)",
-          }}
-        >
-          {isLoading ? (
-            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : (
-            <>
-              <span>Sign In</span>
-              <ChevronRight className="w-5 h-5" />
-            </>
-          )}
-        </button>
+        {mode === "credentials" ? (
+          <>
+            {/* Username field */}
+            <div
+              className="mb-4 rounded-xl border border-purple-500/30 px-4 py-3"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              <label className="text-yellow-400 text-xs font-semibold block mb-1">Username</label>
+              <div className="flex items-center gap-3">
+                <User className="w-4 h-4 text-white/40 flex-shrink-0" />
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
+                  placeholder="Enter username"
+                  className="flex-1 bg-transparent text-white placeholder-white/30 text-sm outline-none"
+                  autoComplete="username"
+                />
+              </div>
+            </div>
+
+            {/* Password field */}
+            <div
+              className="mb-5 rounded-xl border border-purple-500/30 px-4 py-3"
+              style={{ background: "rgba(255,255,255,0.04)" }}
+            >
+              <label className="text-yellow-400 text-xs font-semibold block mb-1">Password</label>
+              <div className="flex items-center gap-3">
+                <Lock className="w-4 h-4 text-white/40 flex-shrink-0" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSignIn()}
+                  placeholder="Enter password"
+                  className="flex-1 bg-transparent text-white placeholder-white/30 text-sm outline-none"
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-white/40 hover:text-white/70 transition-colors"
+                >
+                  {showPassword ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember me */}
+            <div className="flex items-center mb-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <div
+                  onClick={() => setRememberMe((v) => !v)}
+                  className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                    rememberMe ? "bg-purple-600 border-purple-600" : "border-white/30 bg-transparent"
+                  }`}
+                >
+                  {rememberMe && (
+                    <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                      <path d="M2 6l3 3 5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-white/70 text-sm">Remember me</span>
+              </label>
+            </div>
+
+            {/* Sign In button */}
+            <button
+              onClick={handleSignIn}
+              disabled={isLoading || loginMutation.isPending}
+              className="w-full py-4 rounded-xl text-white font-bold text-base flex items-center justify-center gap-2 transition-opacity disabled:opacity-70"
+              style={{
+                background: "linear-gradient(135deg, #7c3aed 0%, #5b21b6 50%, #4c1d95 100%)",
+                border: "1px solid rgba(139, 92, 246, 0.4)",
+              }}
+            >
+              {isLoading || loginMutation.isPending ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
+            </button>
+          </>
+        ) : (
+          <>
+            {/* PIN-only mode */}
+            <div className="flex flex-col items-center py-4">
+              <p className="text-white/60 text-sm mb-6 text-center">
+                Enter your 4-digit Quick PIN to sign in directly.
+              </p>
+
+              <div
+                className="w-full rounded-xl border border-purple-500/30 px-4 py-5 mb-4"
+                style={{ background: "rgba(255,255,255,0.04)" }}
+              >
+                <label className="text-yellow-400 text-xs font-semibold block mb-3 text-center">Quick PIN</label>
+                <div className="flex items-center justify-center gap-4">
+                  {pin.map((digit, i) => (
+                    <div
+                      key={i}
+                      className="w-14 h-14 rounded-xl border-2 flex items-center justify-center transition-colors"
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        borderColor: digit ? "rgba(139, 92, 246, 0.8)" : "rgba(139, 92, 246, 0.3)",
+                      }}
+                    >
+                      <input
+                        ref={pinRefs[i]}
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handlePinChange(i, e.target.value)}
+                        onKeyDown={(e) => handlePinKeyDown(i, e)}
+                        disabled={pinLoading}
+                        className="w-full h-full bg-transparent text-white text-center text-2xl font-bold outline-none disabled:opacity-50"
+                        style={{ caretColor: "transparent" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {pinLoading && (
+                <div className="flex items-center gap-2 text-white/60 text-sm mt-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Verifying PIN...</span>
+                </div>
+              )}
+
+              {!pinLoading && (
+                <p className="text-white/40 text-xs mt-2 text-center">
+                  PIN is automatically submitted when all 4 digits are entered.
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Footer badges */}

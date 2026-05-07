@@ -225,3 +225,14 @@
 - [x] Add updateAnnouncementById, forceCancelUserPremium, clearAllAnnouncementsDb db helpers
 - [x] Import and wire 3 new helpers in routers.ts (updateAnnouncement, forceCancelPremium, clearAllAnnouncements procedures)
 - [x] TypeScript: 0 errors, Tests: 17/17 pass
+
+## Admin Login Fixes
+
+- [x] Re-seed admin accounts with correct credentials (matching documented usernames/passwords/PINs)
+- [x] Add adminPortalLoginByPin procedure (PIN-only login, no username/password needed)
+- [x] Update adminPortalLogin procedure to accept username+password only (no PIN required)
+- [x] Rewrite AdminPortal.tsx: two modes — PIN-only tab and username+password tab
+- [x] Remove "Forgot PIN or Password?" link entirely
+- [x] Ensure PIN entry auto-submits when all 4 digits entered
+- [x] Ensure username+password login does not require PIN
+- [x] Fix routing so all 7 admin panels route correctly after login

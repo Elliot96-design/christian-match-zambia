@@ -1008,3 +1008,24 @@ export async function clearAllAnnouncementsDb() {
   if (!db) return;
   await db.delete(announcements);
 }
+
+// ── PIN-only login helper ─────────────────────────────────────────────────────
+/** Returns all admin accounts so the caller can bcrypt-compare the PIN against each. */
+export async function getAllAdminHashedPins(): Promise<
+  { id: number; adminPin: string | null; adminPanel: string | null; openId: string; name: string | null; adminUsername: string | null }[]
+> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      id: users.id,
+      adminPin: users.adminPin,
+      adminPanel: users.adminPanel,
+      openId: users.openId,
+      name: users.name,
+      adminUsername: users.adminUsername,
+    })
+    .from(users)
+    .where(eq(users.role, "admin"));
+  return rows;
+}

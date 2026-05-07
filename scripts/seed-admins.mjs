@@ -47,30 +47,30 @@ const admins = [
   },
   {
     name: "User Management Admin",
-    adminUsername: "usermgmt",
-    password: "usermgmt@2026",
+    adminUsername: "users",
+    password: "users@2026",
     pin: "4567",
     adminPanel: "users",
     openId: "admin-users-001",
-    email: "usermgmt@faithfulhearts.app",
-  },
-  {
-    name: "Super Admin",
-    adminUsername: "superadmin",
-    password: "superadmin@2026",
-    pin: "0000",
-    adminPanel: "super",
-    openId: "admin-super-001",
-    email: "superadmin@faithfulhearts.app",
+    email: "users@faithfulhearts.app",
   },
   {
     name: "Announcement Admin",
     adminUsername: "announcements",
-    password: "announce@2026",
+    password: "announcements@2026",
     pin: "5678",
     adminPanel: "announcements",
     openId: "admin-announce-001",
     email: "announcements@faithfulhearts.app",
+  },
+  {
+    name: "Super Admin",
+    adminUsername: "super",
+    password: "super@2026",
+    pin: "9999",
+    adminPanel: "super",
+    openId: "admin-super-001",
+    email: "super@faithfulhearts.app",
   },
   {
     name: "Roles Admin",
@@ -91,23 +91,33 @@ async function main() {
     const passwordHash = await bcrypt.hash(admin.password, 10);
     const pinHash = await bcrypt.hash(admin.pin, 10);
 
-    // Check if admin already exists
-    const [existing] = await conn.execute(
-      "SELECT id FROM users WHERE adminUsername = ? LIMIT 1",
-      [admin.adminUsername]
+    // Check if admin already exists by openId (stable) or by panel (handles username changes)
+    const [existingByOpenId] = await conn.execute(
+      "SELECT id FROM users WHERE openId = ? LIMIT 1",
+      [admin.openId]
     );
+    const [existingByPanel] = await conn.execute(
+      "SELECT id FROM users WHERE adminPanel = ? AND role = 'admin' LIMIT 1",
+      [admin.adminPanel]
+    );
+    const existing = existingByOpenId.length > 0 ? existingByOpenId : existingByPanel;
 
     if (existing.length > 0) {
-      // Update existing
+      const rowId = existing[0].id;
+      // Update existing — reset all fields to authoritative values
       await conn.execute(
         `UPDATE users SET
+          openId = ?,
+          name = ?,
+          email = ?,
+          role = 'admin',
+          adminUsername = ?,
           adminPasswordHash = ?,
           adminPin = ?,
           adminPanel = ?,
-          role = 'admin',
-          name = ?
-        WHERE adminUsername = ?`,
-        [passwordHash, pinHash, admin.adminPanel, admin.name, admin.adminUsername]
+          updatedAt = NOW()
+        WHERE id = ?`,
+        [admin.openId, admin.name, admin.email, admin.adminUsername, passwordHash, pinHash, admin.adminPanel, rowId]
       );
       console.log(`✓ Updated admin: ${admin.adminUsername} (${admin.adminPanel})`);
     } else {
