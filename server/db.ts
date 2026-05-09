@@ -698,17 +698,7 @@ export async function getNotificationsForUser(userId: number): Promise<Notificat
     }
   }
 
-  // Premium reminder (static, always shown for non-premium users)
-  items.push({
-    id: "premium-reminder",
-    type: "premium_reminder",
-    title: "Upgrade to Premium",
-    description: "Chat with all members, see who liked you, and get unlimited matches for K50 first month.",
-    createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    read: false,
-  });
-
-  // Sort by date descending
+   // Sort by date descending
   items.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   return items;
 }
@@ -1028,4 +1018,63 @@ export async function getAllAdminHashedPins(): Promise<
     .from(users)
     .where(eq(users.role, "admin"));
   return rows;
+}
+
+// ── Unread message count ──────────────────────────────────────────────────────
+/**
+ * Returns the number of conversations where the most recent message was sent
+ * by the OTHER person (i.e., the current user has not replied yet).
+ * Used for the Messages badge in the bottom nav.
+ */
+export async function getUnreadMessageCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  // Get all unlocked chats for this user
+  const unlocks = await db
+    .select({ payerId: chatUnlocks.payerId, targetId: chatUnlocks.targetId })
+    .from(chatUnlocks)
+    .where(
+      and(
+        eq(chatUnlocks.status, "completed"),
+        or(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.targetId, userId))
+      )
+    );
+  if (unlocks.length === 0) return 0;
+  let unreadCount = 0;
+  for (const unlock of unlocks) {
+    const otherId = unlock.payerId === userId ? unlock.targetId : unlock.payerId;
+    const roomId = userId < otherId ? `${userId}_${otherId}` : `${otherId}_${userId}`;
+    // Get the latest message in this room
+    const [latest] = await db
+      .select({ senderId: messages.senderId })
+      .from(messages)
+      .where(eq(messages.roomId, roomId))
+      .orderBy(desc(messages.createdAt))
+      .limit(1);
+    // If the latest message was sent by the other person, it's "unread"
+    if (latest && latest.senderId !== userId) {
+      unreadCount++;
+    }
+  }
+  return unreadCount;
+}
+
+// ── Notification count (real, non-premium) ────────────────────────────────────
+/**
+ * Returns the count of real notifications (likes + announcements) for the user.
+ * Does NOT include the static premium_reminder.
+ */
+export async function getRealNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [likeCount, annCount] = await Promise.all([
+    db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(chatUnlocks)
+      .where(and(eq(chatUnlocks.targetId, userId), eq(chatUnlocks.status, "completed"))),
+    db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(announcements),
+  ]);
+  return Number(likeCount[0]?.count ?? 0) + Number(annCount[0]?.count ?? 0);
 }

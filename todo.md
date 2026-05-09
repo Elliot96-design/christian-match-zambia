@@ -236,3 +236,13 @@
 - [x] Ensure PIN entry auto-submits when all 4 digits entered
 - [x] Ensure username+password login does not require PIN
 - [x] Fix routing so all 7 admin panels route correctly after login
+
+## Home Screen Fixes
+
+- [x] Remove duplicate white Faithful Hearts header — keep only purple top header
+- [x] Add "Love. Faith. Purpose." tagline under purple header
+- [x] Ensure Go Premium card is always visible on home screen
+- [x] Ensure Complete Profile card is always visible (no appearing/disappearing)
+- [x] Remove premium card from inside notifications bell dropdown
+- [x] Fix fake "3" badge on notifications bell — use real unread count from DB
+- [x] Fix fake "3" badge on Messages bottom nav — use real unread count from DB

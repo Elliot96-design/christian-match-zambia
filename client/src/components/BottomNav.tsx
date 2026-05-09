@@ -5,7 +5,7 @@ export type NavTab = "home" | "swipe" | "chat" | "profile" | "chatroom" | "notif
 interface BottomNavProps {
   active: NavTab;
   onTabChange?: (tab: NavTab) => void;
-  notificationCount?: number;
+  unreadMessageCount?: number;
 }
 
 const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNode }[] = [
@@ -67,7 +67,7 @@ const NAV_ITEMS: { tab: NavTab; label: string; path: string; icon: React.ReactNo
   },
 ];
 
-export default function BottomNav({ active, onTabChange, notificationCount = 3 }: BottomNavProps) {
+export default function BottomNav({ active, onTabChange, unreadMessageCount = 0 }: BottomNavProps) {
   const [, navigate] = useLocation();
 
   const handleTab = (item: (typeof NAV_ITEMS)[number]) => {
@@ -106,12 +106,12 @@ export default function BottomNav({ active, onTabChange, notificationCount = 3 }
             aria-label={item.label}
           >
             {/* Notification badge */}
-            {item.tab === "messages" && notificationCount > 0 && (
+            {item.tab === "messages" && unreadMessageCount > 0 && (
               <span
                 className="absolute -top-0.5 right-1 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
                 style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
               >
-                {notificationCount > 9 ? "9+" : notificationCount}
+                {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
               </span>
             )}
             <span style={{ color: isActive ? "oklch(0.72 0.16 80)" : "oklch(0.70 0.05 290)" }}>

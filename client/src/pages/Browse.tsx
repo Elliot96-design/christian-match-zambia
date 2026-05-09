@@ -596,7 +596,8 @@ function ChatTab({ onBrowse, navigate }: { onBrowse: () => void; navigate: (path
 }
 
 // ─── Main Browse Page ─────────────────────────────────────────────────────────────────
-export default function Browse() {  const { user, loading, isAuthenticated, logout } = useAuth();
+export default function Browse() {
+  const { user, loading, isAuthenticated, logout } = useAuth();
   const [, navigate] = useLocation();
   const searchString = useSearch();
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
@@ -634,6 +635,18 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
 
   const verseIndex = new Date().getDate() % DAILY_VERSES.length;
   const verse = DAILY_VERSES[verseIndex]!;
+
+  // Real badge counts from DB
+  const { data: notifCountData } = trpc.home.notificationCount.useQuery(
+    undefined,
+    { enabled: !!isAuthenticated && !loading }
+  );
+  const { data: unreadMsgData } = trpc.home.unreadMessageCount.useQuery(
+    undefined,
+    { enabled: !!isAuthenticated && !loading }
+  );
+  const notificationCount = notifCountData?.count ?? 0;
+  const unreadMessageCount = unreadMsgData?.count ?? 0;
 
   const { data: browseUsers, isLoading, refetch, error: browseError } = trpc.browse.list.useQuery(
     { gender: filterGender, location: filterLocation, offset },
@@ -708,41 +721,39 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
     if (activeTab === "profile") {
       if (!user) return null;
       return <ProfileTab user={user} onLogout={handleLogout} navigate={navigate} onTabChange={setActiveTab} />;
-    }
-
-    // ── SWIPE / DISCOVER tab ───────────────────────────────────────────────
+    }    // ── SWIPE / DISCOVER tab ───────────────────────────────────────────────────────────────────
     if (activeTab === "swipe") {
       return <DiscoverTab />;
     }
-
-    // ── CHAT tab ────────────────────────────────────────────────────
+    // ── CHAT tab ────────────────────────────────────────────────────────────────
     if (activeTab === "chat" || activeTab === "messages") {
       return <ChatTab onBrowse={() => setActiveTab("swipe")} navigate={navigate} />;
     }
-
-    // ── NOTIFICATIONS tab ───────────────────────────────────────────────────────────
+    // ── NOTIFICATIONS tab ─────────────────────────────────────────────────────────────────────────────────────
     if (activeTab === "notifications") {
       return <NotificationsTab onTabChange={setActiveTab} />;
     }
-
-    // ── HOME tab (default) ────────────────────────────────────────────────────────────────
+    // ── HOME tab (default) ─────────────────────────────────────────────────────────────────────────────────────
     return (
-      <HomeTab onTabChange={(tab) => setActiveTab(tab as NavTab)} notificationCount={3} />
+      <HomeTab onTabChange={(tab) => setActiveTab(tab as NavTab)} />
     );
   };
 
   return (
     <div className="h-screen bg-background flex flex-col max-w-[480px] mx-auto overflow-hidden">
-      {/* Top header */}
+      {/* Top header — single purple header for the entire app */}
       <header className="hero-gradient px-4 pt-3 pb-3 flex items-center justify-between flex-shrink-0">
         <button onClick={() => setActiveTab("home")} className="w-9 h-9 flex items-center justify-center rounded-lg">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-5 h-5">
             <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <button onClick={handleLogoTap} className="flex items-center gap-2 cursor-pointer select-none" aria-label="Faithful Hearts">
-          <img src={LOGO_URL} alt="" className="w-7 h-7 rounded-lg object-cover" />
-          <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
+        <button onClick={handleLogoTap} className="flex flex-col items-center cursor-pointer select-none" aria-label="Faithful Hearts">
+          <div className="flex items-center gap-2">
+            <img src={LOGO_URL} alt="" className="w-7 h-7 rounded-lg object-cover" />
+            <span className="font-display font-bold text-white text-base">Faithful Hearts</span>
+          </div>
+          <span className="text-[9px] font-semibold tracking-widest" style={{ color: "oklch(0.72 0.16 80)" }}>LOVE. FAITH. PURPOSE.</span>
         </button>
         <div className="relative">
           <button
@@ -752,7 +763,11 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
           >
             <Bell className="w-5 h-5 text-white" />
           </button>
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-primary text-[9px] font-bold rounded-full flex items-center justify-center">3</span>
+          {notificationCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-yellow-400 text-primary text-[9px] font-bold rounded-full flex items-center justify-center">
+              {notificationCount > 9 ? "9+" : notificationCount}
+            </span>
+          )}
         </div>
       </header>
 
@@ -762,7 +777,7 @@ export default function Browse() {  const { user, loading, isAuthenticated, logo
       </div>
 
       {/* Bottom nav */}
-      <BottomNav active={activeTab} onTabChange={setActiveTab} />
+      <BottomNav active={activeTab} onTabChange={setActiveTab} unreadMessageCount={unreadMessageCount} />
 
       {/* Payment modal */}
       {showPayment && selectedUserId && (

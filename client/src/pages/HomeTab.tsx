@@ -315,10 +315,8 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
 // ─── Main HomeTab Component ───────────────────────────────────────────────────
 export default function HomeTab({
   onTabChange,
-  notificationCount = 3,
 }: {
   onTabChange: (tab: string) => void;
-  notificationCount?: number;
 }) {
   const { user } = useAuth();
   const [, navigate] = useLocation();
@@ -333,9 +331,12 @@ export default function HomeTab({
   const { data: announcements, isLoading: loadingAnnouncements } = trpc.home.announcements.useQuery();
   const { data: premiumStatus } = trpc.profile.premiumStatus.useQuery();
   const { data: completionData } = trpc.profile.completionScore.useQuery();
+  const { data: notifCountData } = trpc.home.notificationCount.useQuery();
 
   const isPremium = premiumStatus?.isPremium ?? user?.isPremium ?? false;
-  const completionScore = completionData?.score ?? 70;
+  // Default to 0 so card is always visible until real data loads
+  const completionScore = completionData?.score ?? 0;
+  const notificationCount = notifCountData?.count ?? 0;
 
   const firstName = user?.name?.split(" ")[0] ?? "Friend";
   const hour = new Date().getHours();
@@ -424,55 +425,7 @@ export default function HomeTab({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "oklch(0.97 0.008 290)" }}>
-      {/* ── Top Header ─────────────────────────────────────────── */}
-      <header
-        className="flex-shrink-0 px-4 pt-3 pb-3 flex items-center justify-between"
-        style={{ background: "oklch(0.98 0.005 290)", borderBottom: "1px solid oklch(0.91 0.04 290)" }}
-      >
-        {/* Hamburger */}
-        <button
-          onClick={() => toast.info("Menu coming soon")}
-          className="w-9 h-9 flex items-center justify-center rounded-lg"
-          aria-label="Menu"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.28 0.20 290)" strokeWidth={2} className="w-5 h-5">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
-          </svg>
-        </button>
-
-        {/* Logo + Brand */}
-        <div className="flex items-center gap-2">
-          <img src={LOGO_URL} alt="Faithful Hearts" className="w-8 h-8 rounded-xl object-cover" />
-          <div className="text-center">
-            <p className="font-display font-bold text-sm leading-tight" style={{ color: "oklch(0.22 0.18 290)" }}>
-              Faithful Hearts
-            </p>
-            <p className="text-[9px] font-medium tracking-widest" style={{ color: "oklch(0.72 0.16 80)" }}>
-              FAITH. LOVE. PURPOSE.
-            </p>
-          </div>
-        </div>
-
-        {/* Notification bell */}
-        <button
-          onClick={() => onTabChange("notifications")}
-          className="relative w-9 h-9 flex items-center justify-center rounded-full"
-          style={{ background: "oklch(0.94 0.04 290)" }}
-          aria-label="Notifications"
-        >
-          <Bell className="w-4.5 h-4.5" style={{ color: "oklch(0.28 0.20 290)" }} />
-          {notificationCount > 0 && (
-            <span
-              className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[9px] font-bold flex items-center justify-center"
-              style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.18 0.12 290)" }}
-            >
-              {notificationCount > 9 ? "9+" : notificationCount}
-            </span>
-          )}
-        </button>
-      </header>
+      {/* Duplicate inner header removed — Browse.tsx purple header is the single top header */}
 
       {/* ── Scrollable Content ──────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pb-24">
@@ -491,7 +444,33 @@ export default function HomeTab({
           </div>
 
           {/* Go Premium card */}
-          {!isPremium && (
+          {/* Premium card — always visible: upgrade prompt for free users, status badge for premium users */}
+          {isPremium ? (
+            <div
+              className="flex-shrink-0 rounded-2xl p-3 flex items-center gap-2.5"
+              style={{
+                background: "oklch(0.22 0.18 290)",
+                border: "1px solid oklch(0.72 0.16 80 / 0.55)",
+                minWidth: 160,
+                maxWidth: 180,
+              }}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "oklch(0.72 0.16 80 / 0.20)", border: "1px solid oklch(0.72 0.16 80 / 0.5)" }}
+              >
+                <svg viewBox="0 0 24 24" fill="oklch(0.72 0.16 80)" className="w-5 h-5">
+                  <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm2 3h10v2H7v-2z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="font-bold text-sm" style={{ color: "oklch(0.72 0.16 80)" }}>Premium</p>
+                <p className="text-[9px] mt-0.5" style={{ color: "oklch(0.70 0.05 290)" }}>✓ All features active</p>
+                <p className="text-[9px]" style={{ color: "oklch(0.70 0.05 290)" }}>✓ Unlimited matches</p>
+                <p className="text-[9px] mt-1 font-semibold" style={{ color: "oklch(0.72 0.16 80)" }}>Active Member</p>
+              </div>
+            </div>
+          ) : (
             <button
               onClick={() => setShowPremium(true)}
               className="flex-shrink-0 rounded-2xl p-3 flex items-center gap-2.5 active:scale-[0.97] transition-transform"
@@ -686,12 +665,11 @@ export default function HomeTab({
           </div>
         )}
 
-        {/* ── Complete Your Profile ────────────────────────────────── */}
-        {completionScore < 100 && (
+           {/* ── Complete Your Profile — always visible ────────────────── */}
           <div className="px-4 mb-4">
             <div
               className="rounded-2xl p-4 flex items-center gap-3"
-              style={{ background: "oklch(0.98 0.005 290)", border: "1px solid oklch(0.90 0.04 290)", boxShadow: "0 4px 16px oklch(0 0 0 / 0.06)" }}
+              style={{ background: "oklch(0.98 0.005 290)", border: `1px solid ${completionScore >= 100 ? "oklch(0.65 0.20 145 / 0.4)" : "oklch(0.90 0.04 290)"}`, boxShadow: "0 4px 16px oklch(0 0 0 / 0.06)" }}
             >
               {/* Circular progress */}
               <div className="flex-shrink-0 relative w-14 h-14">
@@ -699,37 +677,53 @@ export default function HomeTab({
                   <circle cx="28" cy="28" r="22" fill="none" stroke="oklch(0.90 0.04 290)" strokeWidth="5" />
                   <circle
                     cx="28" cy="28" r="22" fill="none"
-                    stroke="oklch(0.72 0.16 80)"
+                    stroke={completionScore >= 100 ? "oklch(0.65 0.20 145)" : "oklch(0.72 0.16 80)"}
                     strokeWidth="5"
                     strokeLinecap="round"
                     strokeDasharray={`${2 * Math.PI * 22}`}
-                    strokeDashoffset={`${2 * Math.PI * 22 * (1 - completionScore / 100)}`}
+                    strokeDashoffset={`${2 * Math.PI * 22 * (1 - Math.min(completionScore, 100) / 100)}`}
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="font-bold text-xs" style={{ color: "oklch(0.28 0.20 290)" }}>
-                    {completionScore}%
-                  </span>
+                  {completionScore >= 100 ? (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="oklch(0.65 0.20 145)" strokeWidth={2.5} className="w-5 h-5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  ) : (
+                    <span className="font-bold text-xs" style={{ color: "oklch(0.28 0.20 290)" }}>
+                      {completionScore}%
+                    </span>
+                  )}
                 </div>
               </div>
 
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Complete your profile</p>
-                <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.08 290)" }}>
-                  A complete profile gets you more matches and better connections
-                </p>
+                {completionScore >= 100 ? (
+                  <>
+                    <p className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Profile Complete!</p>
+                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.08 290)" }}>
+                      Your profile is fully set up. You're getting the best matches.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Complete your profile</p>
+                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.08 290)" }}>
+                      A complete profile gets you more matches and better connections
+                    </p>
+                  </>
+                )}
               </div>
 
               <button
                 onClick={() => navigate("/edit-profile")}
                 className="flex-shrink-0 px-4 py-2.5 rounded-xl font-bold text-xs"
-                style={{ background: "oklch(0.28 0.20 290)", color: "white" }}
+                style={{ background: completionScore >= 100 ? "oklch(0.65 0.20 145)" : "oklch(0.28 0.20 290)", color: "white" }}
               >
-                Complete Now
+                {completionScore >= 100 ? "View Profile" : "Complete Now"}
               </button>
             </div>
           </div>
-        )}
       </div>
 
       {/* ── Modals ─────────────────────────────────────────────────── */}

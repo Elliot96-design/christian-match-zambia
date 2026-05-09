@@ -1,18 +1,16 @@
 import { trpc } from "@/lib/trpc";
-import { Bell, Crown, Heart, MessageCircle } from "lucide-react";
+import { Bell, Heart, MessageCircle } from "lucide-react";
 import { NavTab } from "@/components/BottomNav";
 
 const typeIcon: Record<string, React.ReactNode> = {
   like: <Heart className="w-5 h-5 text-pink-500" />,
   announcement: <Bell className="w-5 h-5 text-purple-500" />,
-  premium_reminder: <Crown className="w-5 h-5 text-yellow-500" />,
   default: <MessageCircle className="w-5 h-5 text-purple-400" />,
 };
 
 const typeBg: Record<string, string> = {
   like: "oklch(0.96 0.04 0)",
   announcement: "oklch(0.94 0.04 290)",
-  premium_reminder: "oklch(0.96 0.06 80)",
 };
 
 function timeAgo(date: Date): string {
@@ -99,17 +97,6 @@ export default function NotificationsTab({ onTabChange }: { onTabChange: (tab: N
                 <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "oklch(0.50 0.08 290)" }}>
                   {n.description}
                 </p>
-
-                {/* CTA for premium reminder */}
-                {n.type === "premium_reminder" && (
-                  <button
-                    onClick={() => onTabChange("home")}
-                    className="mt-2 text-xs font-bold px-3 py-1 rounded-full"
-                    style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.18 0.12 290)" }}
-                  >
-                    Upgrade Now
-                  </button>
-                )}
 
                 {/* CTA for like */}
                 {n.type === "like" && (

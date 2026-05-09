@@ -67,6 +67,8 @@ import {
   forceCancelUserPremium,
   clearAllAnnouncementsDb,
   getAllAdminHashedPins,
+  getUnreadMessageCount,
+  getRealNotificationCount,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -581,6 +583,14 @@ export const appRouter = router({
 
     notifications: protectedProcedure.query(async ({ ctx }) => {
       return getNotificationsForUser(ctx.user.id);
+    }),
+    unreadMessageCount: protectedProcedure.query(async ({ ctx }) => {
+      const count = await getUnreadMessageCount(ctx.user.id);
+      return { count };
+    }),
+    notificationCount: protectedProcedure.query(async ({ ctx }) => {
+      const count = await getRealNotificationCount(ctx.user.id);
+      return { count };
     }),
   }),
 
