@@ -246,3 +246,16 @@
 - [x] Remove premium card from inside notifications bell dropdown
 - [x] Fix fake "3" badge on notifications bell — use real unread count from DB
 - [x] Fix fake "3" badge on Messages bottom nav — use real unread count from DB
+
+
+## Premium Payment Routing Audit & Fix
+
+- [x] Audit all premium payment buttons: Go Premium card (Home), Discover tab premium banner, Profile tab upgrade nudge, DiscoverTab premium upgrade card
+- [x] Ensure PremiumCheckoutModal matches exact design: 1-month K50 (MOST POPULAR), 3-month K250, plan selection, payment method (MTN/Airtel), security notice, Continue button
+- [x] Fix Go Premium card on HomeTab to route to PremiumCheckoutModal
+- [x] Fix Discover tab "Unlock the full experience" premium banner to route to PremiumCheckoutModal
+- [x] Fix DiscoverTab bottom premium upgrade card to route to PremiumCheckoutModal
+- [x] Ensure K20 unlock card uses separate PaymentModal (not PremiumCheckoutModal)
+- [x] Ensure Manage Plan button uses ManagePlanModal (not PremiumCheckoutModal)
+- [x] Test all routing flows: each premium button → PremiumCheckoutModal
+- [x] TypeScript: 0 errors, Tests: 17/17 pass
