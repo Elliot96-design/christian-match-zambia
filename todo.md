@@ -259,3 +259,16 @@
 - [x] Ensure Manage Plan button uses ManagePlanModal (not PremiumCheckoutModal)
 - [x] Test all routing flows: each premium button → PremiumCheckoutModal
 - [x] TypeScript: 0 errors, Tests: 17/17 pass
+
+
+## Payment Method Expansion & Manual Approval
+
+- [x] Update PremiumCheckoutModal: add Visa/Mastercard as third payment method
+- [x] Make MTN card color vibrant orange (#FFC107), Airtel card color vibrant red (#E53935)
+- [x] Add manual payment numbers: MTN +260964214471, Airtel +260776550784
+- [x] Show manual payment instructions in checkout (user sends money, waits for approval)
+- [x] Add finance admin UI to view and approve pending manual payments
+- [x] Add finance admin UI to manually activate premium for approved payments
+- [x] Add tRPC procedures: admin.getPendingManualPayments, admin.approveManualPayment
+- [x] Test manual payment flow: submit → finance admin approves → account activated
+- [x] TypeScript: 0 errors, Tests: 17/17 pass

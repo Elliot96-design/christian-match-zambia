@@ -19,15 +19,25 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
 
 export default function FinanceAdmin() {
   const [page, setPage] = useState(0);
+  const [approvingId, setApprovingId] = useState<number | null>(null);
   const PAGE_SIZE = 20;
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.stats.useQuery();
   const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = trpc.admin.allPayments.useQuery();
+  const { data: pendingManualPayments, isLoading: pendingLoading, refetch: refetchPending } = trpc.admin.getPendingManualPayments.useQuery();
+  
+  const approvePayment = trpc.admin.approveManualPayment.useMutation({
+    onSuccess: () => {
+      refetchPending();
+      refetchStats();
+      setApprovingId(null);
+    },
+  });
 
   const paginated = payments?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) ?? [];
   const totalPages = Math.ceil((payments?.length ?? 0) / PAGE_SIZE);
 
-  const handleRefresh = () => { refetchStats(); refetchPayments(); };
+  const handleRefresh = () => { refetchStats(); refetchPayments(); refetchPending(); };
 
   const statusColor = (s: string) => {
     if (s === "completed") return "#10b981";
@@ -64,6 +74,62 @@ export default function FinanceAdmin() {
           <StatCard label="Total Payments" value={stats?.totalPayments ?? 0} icon={<Users className="w-4 h-4" />} color="#3b82f6" />
         </div>
       )}
+
+      {/* Pending Manual Payments */}
+      <div className="mb-6 rounded-xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
+        <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between" style={{ background: "rgba(255,165,0,0.1)" }}>
+          <h3 className="text-white font-semibold text-sm">⏳ Pending Manual Payments</h3>
+          <span className="text-white/40 text-xs">{pendingManualPayments?.length ?? 0} awaiting approval</span>
+        </div>
+
+        {pendingLoading ? (
+          <div className="p-8 text-center text-white/40 text-sm">Loading pending payments...</div>
+        ) : !pendingManualPayments || pendingManualPayments.length === 0 ? (
+          <div className="p-8 text-center text-white/40 text-sm">No pending manual payments.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-white/10">
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">ID</th>
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">Amount</th>
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">Provider</th>
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">Status</th>
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">Submitted</th>
+                  <th className="text-left px-4 py-2 text-white/40 text-xs font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingManualPayments.map((p) => (
+                  <tr key={p.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
+                    <td className="px-4 py-3 text-white text-xs">#{p.id}</td>
+                    <td className="px-4 py-3 text-green-400 font-semibold text-xs">K{p.amount}</td>
+                    <td className="px-4 py-3 text-white/70 text-xs capitalize">{p.provider}</td>
+                    <td className="px-4 py-3 text-white/70 text-xs">
+                      <span className="inline-block px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 text-xs">Pending</span>
+                    </td>
+                    <td className="px-4 py-3 text-white/40 text-xs">
+                      {new Date(p.createdAt).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={() => {
+                          setApprovingId(p.id);
+                          approvePayment.mutate({ paymentId: p.id });
+                        }}
+                        disabled={approvingId === p.id || approvePayment.isPending}
+                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30 hover:border-green-600/60 disabled:opacity-40 transition-colors"
+                      >
+                        {approvingId === p.id ? "Approving..." : "Approve & Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Payments table */}
       <div className="rounded-xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>

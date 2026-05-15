@@ -392,7 +392,7 @@ export const appRouter = router({
   payment: router({
     // Initiate a premium subscription payment (K50 first month, K100 after)
     initiatePremium: protectedProcedure
-      .input(z.object({ provider: z.enum(["mtn", "airtel", "mock"]), phone: z.string().optional() }))
+      .input(z.object({ provider: z.enum(["mtn", "airtel", "visa", "mock"]), phone: z.string().optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         if (ctx.user.isPremium) throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
@@ -636,6 +636,21 @@ export const appRouter = router({
     allPayments: adminProcedure.query(async () => {
       return getPremiumPaymentsList();
     }),
+    getPendingManualPayments: adminProcedure.query(async () => {
+      return [] as { id: number; amount: number; provider: string; createdAt: Date }[];
+    }),
+    approveManualPayment: adminProcedure
+      .input(z.object({ paymentId: z.number().int() }))
+      .mutation(async ({ input }) => {
+        const unlock = await getPendingUnlockById(input.paymentId, 0);
+        if (!unlock) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
+        if (unlock.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Payment already processed" });
+        
+        const reference = `MAN-${nanoid(12).toUpperCase()}`;
+        await completeChatUnlock(input.paymentId, reference);
+        await setUserPremium(unlock.payerId, true);
+        return { success: true, reference };
+      }),
     // ── Support Admin ──────────────────────────────────────────────────────
     supportTickets: adminProcedure.query(async () => {
       return getAllSupportTickets();

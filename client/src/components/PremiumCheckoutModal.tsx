@@ -4,7 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
 type Plan = "1month" | "3months";
-type Provider = "mtn" | "airtel";
+type Provider = "mtn" | "airtel" | "visa";
 
 interface PremiumCheckoutModalProps {
   onClose: () => void;
@@ -35,13 +35,25 @@ const PROVIDERS = [
     id: "mtn" as Provider,
     label: "MTN Mobile Money",
     logo: "MTN",
-    bgColor: "oklch(0.96 0.06 80)",
+    bgColor: "#FFC107",
+    textColor: "#000",
+    manualNumber: "+260964214471",
   },
   {
     id: "airtel" as Provider,
     label: "Airtel Money",
     logo: "airtel",
-    bgColor: "oklch(0.96 0.04 0)",
+    bgColor: "#E53935",
+    textColor: "#fff",
+    manualNumber: "+260776550784",
+  },
+  {
+    id: "visa" as Provider,
+    label: "Visa / Mastercard",
+    logo: "VISA",
+    bgColor: "#1A1F71",
+    textColor: "#fff",
+    manualNumber: null,
   },
 ];
 
@@ -92,7 +104,12 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
     if (step === "plan") {
       setStep("method");
     } else if (step === "method") {
-      setStep("phone");
+      if (selectedProvider === "visa") {
+        setStep("confirm");
+        initiate.mutate({ provider: selectedProvider });
+      } else {
+        setStep("phone");
+      }
     }
   };
 
@@ -252,7 +269,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                   >
                     <div
                       className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
-                      style={{ background: provider.bgColor, color: "white" }}
+                      style={{ background: provider.bgColor, color: provider.textColor }}
                     >
                       {provider.logo}
                     </div>
@@ -307,7 +324,32 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                 ← Back
               </button>
 
-              <p className="text-sm font-bold text-white mb-1">Enter your {currentProvider.label} number</p>
+              <div className="rounded-2xl p-3 mb-4" style={{ background: "oklch(0.15 0.10 290)" }}>
+                <p className="text-xs font-bold text-white mb-2">Manual Payment Option</p>
+                <p className="text-xs mb-2" style={{ color: "oklch(0.70 0.05 290)" }}>
+                  Send K{currentPlan.price} to:
+                </p>
+                <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: "oklch(0.22 0.18 290)" }}>
+                  <svg className="w-4 h-4" style={{ color: "oklch(0.72 0.16 80)" }} viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z" />
+                  </svg>
+                  <span className="text-sm font-mono text-white flex-1">{currentProvider.manualNumber}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(currentProvider.manualNumber || "");
+                      toast.success("Copied!");
+                    }}
+                    className="text-xs px-2 py-1 rounded" style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
+                  >
+                    Copy
+                  </button>
+                </div>
+                <p className="text-xs mt-2" style={{ color: "oklch(0.70 0.05 290)" }}>
+                  After sending, we'll review and activate your account within 24 hours.
+                </p>
+              </div>
+
+              <p className="text-sm font-bold text-white mb-1">Or enter your {currentProvider.label} number</p>
               <p className="text-xs mb-4" style={{ color: "oklch(0.70 0.05 290)" }}>
                 You will receive a payment prompt on this number for K{currentPlan.price}.
               </p>
@@ -340,9 +382,13 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
           {step === "confirm" && (
             <div className="text-center">
               <div className="rounded-2xl p-4 mb-5 text-left" style={{ background: "oklch(0.15 0.10 290)" }}>
-                <p className="text-xs font-bold text-white mb-1">Payment prompt sent</p>
+                <p className="text-xs font-bold text-white mb-1">
+                  {selectedProvider === "visa" ? "Ready to complete payment" : "Payment prompt sent"}
+                </p>
                 <p className="text-xs" style={{ color: "oklch(0.70 0.05 290)" }}>
-                  Check your phone for the {currentProvider.label} payment prompt. Once you approve it, tap the button below to complete your upgrade.
+                  {selectedProvider === "visa"
+                    ? "Tap below to securely complete your premium upgrade using Visa or Mastercard."
+                    : `Check your phone for the ${currentProvider.label} payment prompt. Once you approve it, tap the button below to complete your upgrade.`}
                 </p>
               </div>
 
