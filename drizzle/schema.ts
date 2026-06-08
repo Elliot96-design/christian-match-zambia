@@ -186,3 +186,14 @@ export const appSettings = mysqlTable("app_settings", {
 });
 export type AppSetting = typeof appSettings.$inferSelect;
 export type InsertAppSetting = typeof appSettings.$inferInsert;
+
+// Swipes tracking (likes, dislikes, skips on profile cards)
+export const swipes = mysqlTable("swipes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  targetId: int("targetId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  action: varchar("action", { length: 20 }).notNull(), // "like", "dislike", "skip"
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Swipe = typeof swipes.$inferSelect;
+export type InsertSwipe = typeof swipes.$inferInsert;

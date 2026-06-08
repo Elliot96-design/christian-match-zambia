@@ -9,11 +9,13 @@ import {
   InsertLoveStory,
   InsertMessage,
   InsertSupportTicket,
+  InsertSwipe,
   InsertUser,
   InsertUserPhoto,
   LoveStory,
   Message,
   SupportTicket,
+  Swipe,
   User,
   UserPhoto,
   announcements,
@@ -22,6 +24,7 @@ import {
   loveStories,
   messages,
   supportTickets,
+  swipes,
   userPhotos,
   users,
 } from "../drizzle/schema";
@@ -1077,4 +1080,104 @@ export async function getRealNotificationCount(userId: number): Promise<number> 
       .from(announcements),
   ]);
   return Number(likeCount[0]?.count ?? 0) + Number(annCount[0]?.count ?? 0);
+}
+
+
+/**
+ * Get all potential conversation partners with their lock state
+ * Returns: unlocked chats, locked chats (K20 unlock), and premium-only chats
+ */
+export async function getAllConversationPartners(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  // Get all users except self
+  const allUsers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      age: users.age,
+      photoUrl: users.photoUrl,
+      isPremium: users.isPremium,
+      isOnline: users.isOnline,
+    })
+    .from(users)
+    .where(ne(users.id, userId));
+
+  // Get unlocked chats for this user
+  const unlockedIds = await db
+    .select({ targetId: chatUnlocks.targetId })
+    .from(chatUnlocks)
+    .where(and(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.status, "completed")));
+
+  const unlockedSet = new Set(unlockedIds.map(u => u.targetId));
+
+  return allUsers.map(u => ({
+    ...u,
+    lockState: unlockedSet.has(u.id) 
+      ? "unlocked" 
+      : u.isPremium 
+        ? "premium" 
+        : "locked",
+  }));
+}
+
+/**
+ * Get action counts for the current user
+ */
+export async function getActionCounts(userId: number) {
+  const db = await getDb();
+  if (!db) return { likes: 0, requests: 0, views: 0 };
+  
+  // Count new likes (swipes with action = "like")
+  const likesResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(swipes)
+    .where(and(eq(swipes.targetId, userId), eq(swipes.action, "like")));
+  const likesCount = likesResult[0]?.count ?? 0;
+
+  // Count chat requests (locked conversations)
+  const requestsResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(chatUnlocks)
+    .where(and(eq(chatUnlocks.targetId, userId), eq(chatUnlocks.status, "pending")));
+  const requestsCount = requestsResult[0]?.count ?? 0;
+
+  // Count profile views (future feature - for now return 0)
+  const viewsCount = 0;
+
+  return { likes: likesCount, requests: requestsCount, views: viewsCount };
+}
+
+/**
+ * Get Chatroom info: online count and sample member avatars
+ */
+export async function getChatroomInfo() {
+  const db = await getDb();
+  if (!db) return { onlineCount: 0, members: [] };
+  
+  const onlineResult = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(eq(users.isOnline, true));
+  const onlineCount = onlineResult[0]?.count ?? 0;
+
+  // Get sample of online members for avatars
+  const members = await db
+    .select({ id: users.id, name: users.name, photoUrl: users.photoUrl })
+    .from(users)
+    .where(eq(users.isOnline, true))
+    .limit(5);
+
+  return { onlineCount, members };
+}
+
+/**
+ * Record a swipe action (like, dislike, skip)
+ */
+export async function recordSwipe(userId: number, targetId: number, action: "like" | "dislike" | "skip") {
+  const db = await getDb();
+  if (!db) return null;
+  
+  return await db.insert(swipes).values({ userId, targetId, action });
 }

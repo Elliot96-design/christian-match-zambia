@@ -272,3 +272,17 @@
 - [x] Add tRPC procedures: admin.getPendingManualPayments, admin.approveManualPayment
 - [x] Test manual payment flow: submit → finance admin approves → account activated
 - [x] TypeScript: 0 errors, Tests: 17/17 pass
+
+
+## Messages Screen Rebuild (IN PROGRESS)
+
+- [x] Add swipes table to schema for tracking likes/dislikes
+- [x] Add db helpers: getAllConversationPartners, getActionCounts, getChatroomInfo, recordSwipe
+- [ ] Add tRPC procedures: chat.allConversations, chat.actionCounts, chatroom.info
+- [ ] Rebuild MessagesTab UI with exact design: header, filter tabs (All, Unread, Unlocked, Locked, Chatroom)
+- [ ] Add conversation list with avatars, verified badges, lock state indicators
+- [ ] Add "Premium to chat" and "Unlock to chat" buttons for locked conversations
+- [ ] Add Faithful Hearts Chatroom card with join button and online count
+- [ ] Add bottom action cards (New likes, Chat requests, Profile views, Go Premium)
+- [ ] Fix routing: locked conversations → upgrade/unlock modals
+- [ ] Verify TypeScript clean, tests pass
