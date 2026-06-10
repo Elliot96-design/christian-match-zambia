@@ -286,3 +286,17 @@
 - [ ] Add bottom action cards (New likes, Chat requests, Profile views, Go Premium)
 - [ ] Fix routing: locked conversations → upgrade/unlock modals
 - [ ] Verify TypeScript clean, tests pass
+
+
+## Messages Screen Rebuild (Complete)
+
+- [x] Add swipes table to schema for tracking profile likes/dislikes
+- [x] Create db helpers: getAllConversationPartners, getActionCounts, getChatroomInfo
+- [x] Add tRPC procedures: home.allConversations, home.actionCounts, home.chatroomInfo
+- [x] Create MessagesTab component with exact design: filter tabs, conversation list, lock states
+- [x] Show "Premium to chat" for premium-locked conversations with Upgrade button
+- [x] Show "Unlock to chat" for K20-locked conversations with Unlock button
+- [x] Show Faithful Hearts Chatroom card with online count and Join button
+- [x] Show action cards: New likes, Chat requests, Profile views, Go Premium
+- [x] Wire upgrade and unlock modals to show correct flows
+- [x] TypeScript: 0 errors, Tests: 17/17 pass

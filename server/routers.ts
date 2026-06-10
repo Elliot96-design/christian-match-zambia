@@ -69,6 +69,9 @@ import {
   getAllAdminHashedPins,
   getUnreadMessageCount,
   getRealNotificationCount,
+  getAllConversationPartners,
+  getActionCounts,
+  getChatroomInfo,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -591,6 +594,15 @@ export const appRouter = router({
     notificationCount: protectedProcedure.query(async ({ ctx }) => {
       const count = await getRealNotificationCount(ctx.user.id);
       return { count };
+    }),
+    allConversations: protectedProcedure.query(async ({ ctx }) => {
+      return getAllConversationPartners(ctx.user.id);
+    }),
+    actionCounts: protectedProcedure.query(async ({ ctx }) => {
+      return getActionCounts(ctx.user.id);
+    }),
+    chatroomInfo: protectedProcedure.query(async () => {
+      return getChatroomInfo();
     }),
   }),
 
