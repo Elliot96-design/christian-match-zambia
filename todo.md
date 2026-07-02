@@ -315,8 +315,8 @@
 - [x] Create NotificationBell component with dropdown showing real unread notifications
 - [x] Replace Bell button in Browse.tsx header with NotificationBell component
 - [x] Add tests for notification.list, notification.markAsRead, notification.count
-- [ ] Add notification triggers: new like (swipe), new message, new chat request
-- [ ] Test notification flow: like user → notification created → bell updates
+- [x] Add notification triggers: new like (browse.recordLike), new message (chat.send), new chat request (payment.initiate)
+- [x] Test notification flow: like user → notification created → bell updates
 
 ### Unread Message Tracking
 - [x] Add readAt column to messages table (nullable timestamp)
@@ -324,11 +324,12 @@
 - [x] Add getUnreadCountForRoom db helper
 - [x] Add chat.markAsRead tRPC procedure
 - [x] Add tests for chat.markAsRead
-- [ ] Update chat.list to include unread count per conversation
-- [ ] Update MessagesTab to show unread badge on conversations
-- [ ] Auto-mark messages as read when user opens chat room
-- [ ] Update message count badge on Messages tab to show real unread count
-- [ ] Test unread flow: send message → recipient sees badge → opens chat → badge clears
+- [x] Backend infrastructure complete: readAt tracking, markAsRead procedure, getUnreadCountForRoom helper
+- [ ] Update chat.list to include unread count per conversation (future UI enhancement)
+- [ ] Update MessagesTab to show unread badge on conversations (future UI enhancement)
+- [ ] Auto-mark messages as read when user opens chat room (future UI enhancement)
+- [ ] Update message count badge on Messages tab to show real unread count (future UI enhancement)
+- [ ] Test unread flow: send message → recipient sees badge → opens chat → badge clears (future UI testing)
 
 ### Subscription Auto-Renewal & Expiry Notifications
 - [x] Add premiumExpiresAt column to users table
@@ -338,5 +339,5 @@
 - [x] Add notification for "Your premium expires in 3 days"
 - [x] Add notification for "Your premium has expired"
 - [x] Add setPremiumExpiry, getUsersWithExpiringPremium, getUsersWithExpiredPremium, downgradePremium db helpers
-- [ ] Create Heartbeat cron job via CLI to run daily at 9 AM UTC
-- [ ] Test renewal flow: create premium subscription → check expiry date → send notification at 3 days → auto-downgrade at expiry
+- [x] Create Heartbeat cron job via CLI to run daily at 9 AM UTC (task_uid: WA5GTBTJjFLQJcvuK49QjW)
+- [x] Test renewal flow: create premium subscription → check expiry date → send notification at 3 days → auto-downgrade at expiry

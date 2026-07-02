@@ -78,6 +78,7 @@ import {
   getUnreadNotificationCount,
   markMessagesAsRead,
   getUnreadCountForRoom,
+  recordSwipe,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -355,6 +356,20 @@ export const appRouter = router({
     locations: protectedProcedure.query(async () => {
       return getDistinctLocations();
     }),
+
+    recordLike: protectedProcedure
+      .input(z.object({ targetId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        await recordSwipe(ctx.user.id, input.targetId, "like");
+        await createNotification({
+          userId: input.targetId,
+          type: "like",
+          title: "New Like",
+          content: `${ctx.user.name} liked your profile!`,
+          relatedUserId: ctx.user.id,
+        });
+        return { success: true };
+      }),
   }),
 
   // ─── Chat ─────────────────────────────────────────────────────────────────
@@ -393,6 +408,13 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Chat not unlocked." });
         const roomId = buildRoomId(ctx.user.id, input.targetId);
         const msg = await sendMessage({ roomId, senderId: ctx.user.id, content: input.content });
+        await createNotification({
+          userId: input.targetId,
+          type: "message",
+          title: "New Message",
+          content: `${ctx.user.name} sent you a message`,
+          relatedUserId: ctx.user.id,
+        });
         return msg;
       }),
 
@@ -455,6 +477,13 @@ export const appRouter = router({
           amount: 20,
           provider: input.provider,
           status: "pending",
+        });
+        await createNotification({
+          userId: input.targetId,
+          type: "chat_request",
+          title: "New Chat Request",
+          content: `${ctx.user.name} sent you a chat request. Unlock to reply!`,
+          relatedUserId: ctx.user.id,
         });
         return { paymentId: id, amount: 20, provider: input.provider };
       }),

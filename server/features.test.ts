@@ -31,6 +31,8 @@ vi.mock("./db", () => ({
   getUnreadNotificationCount: vi.fn(),
   markMessagesAsRead: vi.fn(),
   getUnreadCountForRoom: vi.fn(),
+  createNotification: vi.fn(),
+  recordSwipe: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
