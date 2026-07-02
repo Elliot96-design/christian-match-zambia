@@ -44,6 +44,41 @@ async function startServer() {
       createContext,
     })
   );
+  // ─── Heartbeat scheduled task handler ──────────────────────────────────────
+  app.post("/api/scheduled/premium-expiry-check", async (req, res) => {
+    try {
+      const { createNotification, getUsersWithExpiringPremium, getUsersWithExpiredPremium, downgradePremium } = await import("../db");
+      
+      // Check for users with premium expiring in 3 days
+      const expiringUsers = await getUsersWithExpiringPremium(3);
+      for (const user of expiringUsers) {
+        await createNotification({
+          userId: user.id,
+          type: "premium_reminder",
+          title: "Your Premium Expires Soon",
+          content: "Your premium membership expires in 3 days. Renew now to keep your benefits.",
+        });
+      }
+      
+      // Check for users with expired premium and downgrade them
+      const expiredUsers = await getUsersWithExpiredPremium();
+      for (const user of expiredUsers) {
+        await downgradePremium(user.id);
+        await createNotification({
+          userId: user.id,
+          type: "premium_expired",
+          title: "Premium Expired",
+          content: "Your premium membership has expired. Upgrade to premium to continue enjoying unlimited chat access.",
+        });
+      }
+      
+      res.json({ ok: true, expiringCount: expiringUsers.length, expiredCount: expiredUsers.length });
+    } catch (error) {
+      console.error("Premium expiry check error:", error);
+      res.status(500).json({ error: String(error), timestamp: new Date().toISOString() });
+    }
+  });
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

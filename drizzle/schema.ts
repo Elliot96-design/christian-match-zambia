@@ -28,6 +28,7 @@ export const users = mysqlTable("users", {
   isBanned: boolean("isBanned").default(false).notNull(),
   isPremium: boolean("isPremium").default(false).notNull(),
   premiumSince: timestamp("premiumSince"),
+  premiumExpiresAt: timestamp("premiumExpiresAt"),
   // Faith & Values
   denomination: varchar("denomination", { length: 128 }),
   faithLevel: mysqlEnum("faithLevel", ["growing", "committed", "deeply_rooted"]),
@@ -74,9 +75,10 @@ export type InsertChatUnlock = typeof chatUnlocks.$inferInsert;
 // Private chat messages (1-on-1)
 export const messages = mysqlTable("messages", {
   id: int("id").autoincrement().primaryKey(),
-  roomId: varchar("roomId", { length: 128 }).notNull(), // sorted "userId1_userId2"
+  roomId: varchar("roomId", { length: 128 }).notNull(),
   senderId: int("senderId").notNull(),
   content: text("content").notNull(),
+  readAt: timestamp("readAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -197,3 +199,17 @@ export const swipes = mysqlTable("swipes", {
 });
 export type Swipe = typeof swipes.$inferSelect;
 export type InsertSwipe = typeof swipes.$inferInsert;
+
+// Notifications (system notifications for likes, messages, premium reminders)
+export const notifications = mysqlTable("notifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  type: mysqlEnum("type", ["like", "message", "chat_request", "premium_reminder", "premium_expired", "view"]).notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  content: text("content"),
+  relatedUserId: int("relatedUserId"),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;

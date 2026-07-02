@@ -26,6 +26,11 @@ vi.mock("./db", () => ({
   countUserPhotos: vi.fn(),
   getMyUnlockedChats: vi.fn(),
   createPremiumPayment: vi.fn(),
+  getUnreadNotifications: vi.fn(),
+  markNotificationAsRead: vi.fn(),
+  getUnreadNotificationCount: vi.fn(),
+  markMessagesAsRead: vi.fn(),
+  getUnreadCountForRoom: vi.fn(),
 }));
 
 vi.mock("./storage", () => ({
@@ -236,5 +241,74 @@ describe("profile.cancelPremium", () => {
   it("throws BAD_REQUEST if user is not premium", async () => {
     const caller = appRouter.createCaller(makeCtx({ isPremium: false }));
     await expect(caller.profile.cancelPremium()).rejects.toThrow();
+  });
+});
+
+
+describe("notification.list", () => {
+  it("returns empty array when no notifications", async () => {
+    vi.mocked(db.getUnreadNotifications).mockResolvedValue([]);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.notification.list();
+    expect(result.notifications).toEqual([]);
+  });
+
+  it("returns unread notifications for user", async () => {
+    const mockNotifications = [
+      {
+        id: 1,
+        userId: 1,
+        type: "like" as const,
+        title: "New Like",
+        content: "Someone liked your profile",
+        relatedUserId: 2,
+        isRead: false,
+        createdAt: new Date(),
+      },
+    ];
+    vi.mocked(db.getUnreadNotifications).mockResolvedValue(mockNotifications);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.notification.list();
+    expect(result.notifications).toHaveLength(1);
+    expect(result.notifications[0].type).toBe("like");
+  });
+});
+
+describe("notification.markAsRead", () => {
+  it("marks notification as read", async () => {
+    vi.mocked(db.markNotificationAsRead).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.notification.markAsRead({ notificationId: 1 });
+    expect(result.success).toBe(true);
+    expect(db.markNotificationAsRead).toHaveBeenCalledWith(1);
+  });
+});
+
+describe("notification.count", () => {
+  it("returns unread notification count", async () => {
+    vi.mocked(db.getUnreadNotificationCount).mockResolvedValue(3);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.notification.count();
+    expect(result.count).toBe(3);
+  });
+});
+
+describe("chat.markAsRead", () => {
+  it("marks messages as read in a chat room", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "completed",
+      amount: 20, provider: "mtn", createdAt: new Date(),
+    });
+    vi.mocked(db.markMessagesAsRead).mockResolvedValue(undefined);
+    const caller = appRouter.createCaller(makeCtx());
+    const result = await caller.chat.markAsRead({ targetId: 2 });
+    expect(result.success).toBe(true);
+    expect(db.markMessagesAsRead).toHaveBeenCalledWith("1_2", 1);
+  });
+
+  it("throws FORBIDDEN if chat not unlocked", async () => {
+    vi.mocked(db.getChatUnlock).mockResolvedValue(null);
+    const caller = appRouter.createCaller(makeCtx());
+    await expect(caller.chat.markAsRead({ targetId: 2 })).rejects.toThrow();
   });
 });

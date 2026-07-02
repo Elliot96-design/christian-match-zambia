@@ -300,3 +300,43 @@
 - [x] Show action cards: New likes, Chat requests, Profile views, Go Premium
 - [x] Wire upgrade and unlock modals to show correct flows
 - [x] TypeScript: 0 errors, Tests: 17/17 pass
+
+## Production Features (Phase 4)
+
+### Push Notifications for Matches & Messages
+- [x] Add notifications table (id, userId, type, title, content, relatedUserId, isRead, createdAt)
+- [x] Add createNotification db helper
+- [x] Add getUnreadNotifications db helper
+- [x] Add markNotificationAsRead db helper
+- [x] Add getUnreadNotificationCount db helper
+- [x] Add notification.list tRPC procedure (returns unread notifications)
+- [x] Add notification.markAsRead tRPC procedure
+- [x] Add notification.count tRPC procedure
+- [x] Create NotificationBell component with dropdown showing real unread notifications
+- [x] Replace Bell button in Browse.tsx header with NotificationBell component
+- [x] Add tests for notification.list, notification.markAsRead, notification.count
+- [ ] Add notification triggers: new like (swipe), new message, new chat request
+- [ ] Test notification flow: like user → notification created → bell updates
+
+### Unread Message Tracking
+- [x] Add readAt column to messages table (nullable timestamp)
+- [x] Add markMessagesAsRead db helper (sets readAt = now for user's received messages)
+- [x] Add getUnreadCountForRoom db helper
+- [x] Add chat.markAsRead tRPC procedure
+- [x] Add tests for chat.markAsRead
+- [ ] Update chat.list to include unread count per conversation
+- [ ] Update MessagesTab to show unread badge on conversations
+- [ ] Auto-mark messages as read when user opens chat room
+- [ ] Update message count badge on Messages tab to show real unread count
+- [ ] Test unread flow: send message → recipient sees badge → opens chat → badge clears
+
+### Subscription Auto-Renewal & Expiry Notifications
+- [x] Add premiumExpiresAt column to users table
+- [x] Create scheduled task (Heartbeat) handler at /api/scheduled/premium-expiry-check
+- [x] Task: check for premium subscriptions expiring in 3 days, send notification
+- [x] Task: check for expired premium subscriptions, downgrade user (set isPremium=false)
+- [x] Add notification for "Your premium expires in 3 days"
+- [x] Add notification for "Your premium has expired"
+- [x] Add setPremiumExpiry, getUsersWithExpiringPremium, getUsersWithExpiredPremium, downgradePremium db helpers
+- [ ] Create Heartbeat cron job via CLI to run daily at 9 AM UTC
+- [ ] Test renewal flow: create premium subscription → check expiry date → send notification at 3 days → auto-downgrade at expiry

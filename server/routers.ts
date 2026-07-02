@@ -72,6 +72,12 @@ import {
   getAllConversationPartners,
   getActionCounts,
   getChatroomInfo,
+  createNotification,
+  getUnreadNotifications,
+  markNotificationAsRead,
+  getUnreadNotificationCount,
+  markMessagesAsRead,
+  getUnreadCountForRoom,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
@@ -388,6 +394,17 @@ export const appRouter = router({
         const roomId = buildRoomId(ctx.user.id, input.targetId);
         const msg = await sendMessage({ roomId, senderId: ctx.user.id, content: input.content });
         return msg;
+      }),
+
+    markAsRead: protectedProcedure
+      .input(z.object({ targetId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        const unlock = await getChatUnlock(ctx.user.id, input.targetId);
+        if (!unlock)
+          throw new TRPCError({ code: "FORBIDDEN", message: "Chat not unlocked." });
+        const roomId = buildRoomId(ctx.user.id, input.targetId);
+        await markMessagesAsRead(roomId, ctx.user.id);
+        return { success: true };
       }),
   }),
 
@@ -819,6 +836,24 @@ export const appRouter = router({
         }
         return { success: true };
       }),
+  }),
+
+  // ─── Notifications ────────────────────────────────────────────────────────
+  notification: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      const notifications = await getUnreadNotifications(ctx.user.id);
+      return { notifications };
+    }),
+    markAsRead: protectedProcedure
+      .input(z.object({ notificationId: z.number().int() }))
+      .mutation(async ({ input }) => {
+        await markNotificationAsRead(input.notificationId);
+        return { success: true };
+      }),
+    count: protectedProcedure.query(async ({ ctx }) => {
+      const count = await getUnreadNotificationCount(ctx.user.id);
+      return { count };
+    }),
   }),
 });
 export type AppRouter = typeof appRouter;

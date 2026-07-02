@@ -8,12 +8,14 @@ import {
   InsertChatUnlock,
   InsertLoveStory,
   InsertMessage,
+  InsertNotification,
   InsertSupportTicket,
   InsertSwipe,
   InsertUser,
   InsertUserPhoto,
   LoveStory,
   Message,
+  Notification,
   SupportTicket,
   Swipe,
   User,
@@ -23,6 +25,7 @@ import {
   chatUnlocks,
   loveStories,
   messages,
+  notifications,
   supportTickets,
   swipes,
   userPhotos,
@@ -1180,4 +1183,166 @@ export async function recordSwipe(userId: number, targetId: number, action: "lik
   if (!db) return null;
   
   return await db.insert(swipes).values({ userId, targetId, action });
+}
+
+// ── Notifications ─────────────────────────────────────────────────────────────
+
+/**
+ * Create a new notification for a user
+ */
+export async function createNotification(data: InsertNotification): Promise<Notification | null> {
+  const db = await getDb();
+  if (!db) return null;
+  
+  await db.insert(notifications).values(data);
+  
+  // Fetch the most recently created notification for this user
+  const [created] = await db
+    .select()
+    .from(notifications)
+    .where(eq(notifications.userId, data.userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(1);
+  
+  return created ?? null;
+}
+
+/**
+ * Get all unread notifications for a user
+ */
+export async function getUnreadNotifications(userId: number): Promise<Notification[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  return await db
+    .select()
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)))
+    .orderBy(desc(notifications.createdAt));
+}
+
+/**
+ * Mark a notification as read
+ */
+export async function markNotificationAsRead(notificationId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db
+    .update(notifications)
+    .set({ isRead: true })
+    .where(eq(notifications.id, notificationId));
+}
+
+/**
+ * Get count of unread notifications for a user
+ */
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  
+  return Number(result[0]?.count ?? 0);
+}
+
+/**
+ * Mark all messages in a room as read for a specific recipient
+ */
+export async function markMessagesAsRead(roomId: string, recipientId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db
+    .update(messages)
+    .set({ readAt: new Date() })
+    .where(and(eq(messages.roomId, roomId), ne(messages.senderId, recipientId)));
+}
+
+/**
+ * Get unread message count for a specific conversation
+ */
+export async function getUnreadCountForRoom(roomId: string, recipientId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  
+  const result = await db
+    .select({ count: sql<number>`COUNT(*)` })
+    .from(messages)
+    .where(and(eq(messages.roomId, roomId), ne(messages.senderId, recipientId), sql`${messages.readAt} IS NULL`));
+  
+  return Number(result[0]?.count ?? 0);
+}
+
+/**
+ * Set premium expiry date for a user (30 days from now)
+ */
+export async function setPremiumExpiry(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+  
+  await db
+    .update(users)
+    .set({ premiumExpiresAt: expiresAt })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * Get users with premium expiring in the next N days
+ */
+export async function getUsersWithExpiringPremium(daysUntilExpiry: number): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const now = new Date();
+  const expiryThreshold = new Date();
+  expiryThreshold.setDate(expiryThreshold.getDate() + daysUntilExpiry);
+  
+  return await db
+    .select()
+    .from(users)
+    .where(and(
+      eq(users.isPremium, true),
+      sql`${users.premiumExpiresAt} IS NOT NULL`,
+      sql`${users.premiumExpiresAt} > ${now}`,
+      sql`${users.premiumExpiresAt} <= ${expiryThreshold}`
+    ));
+}
+
+/**
+ * Get users with expired premium
+ */
+export async function getUsersWithExpiredPremium(): Promise<User[]> {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const now = new Date();
+  
+  return await db
+    .select()
+    .from(users)
+    .where(and(
+      eq(users.isPremium, true),
+      sql`${users.premiumExpiresAt} IS NOT NULL`,
+      sql`${users.premiumExpiresAt} <= ${now}`
+    ));
+}
+
+/**
+ * Downgrade a user's premium status
+ */
+export async function downgradePremium(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  
+  await db
+    .update(users)
+    .set({ isPremium: false, premiumExpiresAt: null })
+    .where(eq(users.id, userId));
 }

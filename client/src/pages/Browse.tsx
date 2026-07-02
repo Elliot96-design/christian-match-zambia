@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import ManagePlanModal from "@/components/ManagePlanModal";
+import NotificationBell from "@/components/NotificationBell";
 import BottomNav, { NavTab } from "@/components/BottomNav";
 import DiscoverTab from "@/pages/DiscoverTab";
 import HomeTab from "@/pages/HomeTab";
@@ -755,20 +756,7 @@ export default function Browse() {
           </div>
           <span className="text-[9px] font-semibold tracking-widest" style={{ color: "oklch(0.72 0.16 80)" }}>LOVE. FAITH. PURPOSE.</span>
         </button>
-        <div className="relative">
-          <button
-            onClick={() => setActiveTab("notifications")}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-white/10"
-            aria-label="Notifications"
-          >
-            <Bell className="w-5 h-5 text-white" />
-          </button>
-          {notificationCount > 0 && (
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 bg-yellow-400 text-primary text-[9px] font-bold rounded-full flex items-center justify-center">
-              {notificationCount > 9 ? "9+" : notificationCount}
-            </span>
-          )}
-        </div>
+        <NotificationBell />
       </header>
 
       {/* Page content */}
