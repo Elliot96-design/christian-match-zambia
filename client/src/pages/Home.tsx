@@ -1,5 +1,4 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { LOGO_URL } from "@/components/AppHeader";
@@ -90,7 +89,7 @@ export default function Home() {
           </div>
         </div>
         <a
-          href={getLoginUrl()}
+          href={"/login"}
           className="badge-premium flex items-center gap-1.5 px-3 py-1.5 text-xs"
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-3 h-3">

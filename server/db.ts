@@ -91,6 +91,41 @@ export async function getUserByOpenId(openId: string): Promise<User | undefined>
   return result[0];
 }
 
+export async function getUserByEmail(email: string): Promise<User | undefined> {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
+  return result[0];
+}
+
+export async function createLocalUser(data: {
+  email: string;
+  passwordHash: string;
+  name?: string;
+}): Promise<User> {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const openId = `local_${crypto.randomUUID()}`;
+  const result = await db.insert(users).values({
+    openId,
+    email: data.email,
+    passwordHash: data.passwordHash,
+    name: data.name || null,
+    loginMethod: "password",
+    lastSignedIn: new Date(),
+  });
+  const insertId = Number((result[0] as { insertId: number }).insertId);
+  const user = await getUserById(insertId);
+  if (!user) throw new Error("Failed to create user");
+  return user;
+}
+
+export async function touchUserLogin(userId: number): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
+}
+
 export async function getUserById(id: number): Promise<User | undefined> {
   const db = await getDb();
   if (!db) return undefined;

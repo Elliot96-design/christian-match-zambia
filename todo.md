@@ -7,7 +7,7 @@
 - [x] Run db:push to apply migrations
 
 ## Authentication & Profile Setup
-- [x] Sign-up / login via Manus OAuth (email or phone)
+- [x] Sign-up / login via standalone email/password auth
 - [x] Profile setup wizard (name, age, gender, location, church, bio)
 - [x] Profile picture upload (single photo, stored in S3)
 - [x] Edit profile page

@@ -79,9 +79,13 @@ import {
   markMessagesAsRead,
   getUnreadCountForRoom,
   recordSwipe,
+  getUserByEmail,
+  createLocalUser,
+  touchUserLogin,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
+import { createAuthToken, hashPassword, verifyPassword } from "./auth";
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -96,10 +100,30 @@ export const appRouter = router({
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
     logout: publicProcedure.mutation(({ ctx }) => {
-      const cookieOptions = getSessionCookieOptions(ctx.req);
-      ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+      ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
       return { success: true } as const;
     }),
+    register: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(2).max(64).optional() }))
+      .mutation(async ({ input }) => {
+        const email = input.email.trim().toLowerCase();
+        if (await getUserByEmail(email)) {
+          throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+        }
+        const user = await createLocalUser({ email, passwordHash: await hashPassword(input.password), name: input.name?.trim() });
+        return { token: await createAuthToken(user.id), user };
+      }),
+    login: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        const user = await getUserByEmail(input.email.trim().toLowerCase());
+        if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
+        }
+        if (user.isBanned) throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
+        await touchUserLogin(user.id);
+        return { token: await createAuthToken(user.id), user };
+      }),
     // Login with username + password (no PIN required)
     adminPortalLogin: publicProcedure
       .input(z.object({ username: z.string().min(1), password: z.string().min(1) }))
@@ -113,11 +137,7 @@ export const appRouter = router({
         if (!passwordOk) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
-        const { sdk } = await import("./_core/sdk");
-        const token = await sdk.createSessionToken(admin.openId, { name: admin.name ?? admin.adminUsername ?? "Admin" });
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-        return { success: true, adminPanel: admin.adminPanel ?? "users" } as const;
+        return { success: true, adminPanel: admin.adminPanel ?? "users", token: await createAuthToken(admin.id) } as const;
       }),
     // Login with PIN only (no username/password required)
     adminPortalLoginByPin: publicProcedure
@@ -135,11 +155,7 @@ export const appRouter = router({
         if (!matched) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid PIN" });
         }
-        const { sdk } = await import("./_core/sdk");
-        const token = await sdk.createSessionToken(matched.openId, { name: matched.name ?? matched.adminUsername ?? "Admin" });
-        const cookieOptions = getSessionCookieOptions(ctx.req);
-        ctx.res.cookie(COOKIE_NAME, token, cookieOptions);
-        return { success: true, adminPanel: matched.adminPanel ?? "users" } as const;
+        return { success: true, adminPanel: matched.adminPanel ?? "users", token: await createAuthToken(matched.id) } as const;
       }),
   }),
 

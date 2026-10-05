@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { ArrowLeft, BookOpen, Church, Heart, Sun } from "lucide-react";
 
-const LOGO_URL = "/manus-storage/faithful-hearts-logo_b31fd195.png";
+const LOGO_URL = "/faithful-hearts-logo.svg";
 
 const DENOMINATIONS = [
   "Pentecostal",

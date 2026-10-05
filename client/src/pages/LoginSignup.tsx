@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
-import { getLoginUrl } from "@/const";
+import { setAuthToken } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
@@ -10,6 +11,13 @@ export default function LoginSignup() {
   const [, navigate] = useLocation();
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const utils = trpc.useUtils();
+  const login = trpc.auth.login.useMutation({ onSuccess: ({ token }) => { setAuthToken(token); utils.auth.me.invalidate(); navigate("/browse"); } });
+  const register = trpc.auth.register.useMutation({ onSuccess: ({ token }) => { setAuthToken(token); utils.auth.me.invalidate(); navigate("/setup"); } });
 
   useEffect(() => {
     if (!loading && isAuthenticated) navigate("/browse");
@@ -75,12 +83,15 @@ export default function LoginSignup() {
         </div>
 
         {/* Email */}
+        {tab === "signup" && (
+          <input value={name} onChange={(event) => setName(event.target.value)} type="text" placeholder="Full Name" className="w-full rounded-2xl border border-border bg-white px-4 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary transition-colors" style={{ height: "52px" }} />
+        )}
         <div className="relative">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
             <Mail className="w-4.5 h-4.5" />
           </div>
           <input
-            type="email"
+            type="email" value={email} onChange={(event) => setEmail(event.target.value)}
             placeholder="Email Address"
             className="w-full h-13 rounded-2xl border border-border bg-white pl-11 pr-4 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary transition-colors"
             style={{ height: "52px" }}
@@ -94,7 +105,7 @@ export default function LoginSignup() {
           </div>
           <input
             type={showPassword ? "text" : "password"}
-            placeholder="Password"
+            placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)}
             className="w-full h-13 rounded-2xl border border-border bg-white pl-11 pr-12 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:border-primary transition-colors"
             style={{ height: "52px" }}
           />
@@ -113,14 +124,24 @@ export default function LoginSignup() {
           </div>
         )}
 
+        {error && <p className="text-xs text-red-600 text-center">{error}</p>}
+
         {/* Primary CTA */}
-        <a
-          href={getLoginUrl()}
+        <button
+          type="button"
+          disabled={login.isPending || register.isPending}
+          onClick={async () => {
+            setError("");
+            try {
+              if (tab === "login") await login.mutateAsync({ email, password });
+              else await register.mutateAsync({ email, password, name: name || undefined });
+            } catch (err) { setError(err instanceof Error ? err.message : "Unable to authenticate"); }
+          }}
           className="btn-purple flex items-center justify-center w-full text-sm font-bold"
           style={{ height: "52px", borderRadius: "16px" }}
         >
-          {tab === "login" ? "Log In" : "Create Account"}
-        </a>
+          {login.isPending || register.isPending ? "Please wait…" : tab === "login" ? "Log In" : "Create Account"}
+        </button>
       </div>
 
       {/* Divider */}
@@ -132,8 +153,9 @@ export default function LoginSignup() {
 
       {/* Social buttons */}
       <div className="px-5 mt-3 space-y-2.5 flex-shrink-0">
-        <a
-          href={getLoginUrl()}
+        <button
+          type="button"
+          disabled
           className="flex items-center gap-3 w-full rounded-2xl border border-border bg-white px-5 text-sm font-medium text-foreground active:bg-gray-50 transition-colors"
           style={{ height: "52px" }}
         >
@@ -143,19 +165,20 @@ export default function LoginSignup() {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Continue with Google
-        </a>
+          Continue with Google (coming soon)
+        </button>
 
-        <a
-          href={getLoginUrl()}
+        <button
+          type="button"
+          disabled
           className="flex items-center gap-3 w-full rounded-2xl border border-border bg-white px-5 text-sm font-medium text-foreground active:bg-gray-50 transition-colors"
           style={{ height: "52px" }}
         >
           <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 flex-shrink-0">
             <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
           </svg>
-          Continue with Apple
-        </a>
+          Continue with Apple (coming soon)
+        </button>
       </div>
 
       {/* Bottom switch */}

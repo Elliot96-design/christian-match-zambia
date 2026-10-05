@@ -5,7 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 import { ArrowLeft, Heart, MapPin, Users } from "lucide-react";
 
-const LOGO_URL = "/manus-storage/faithful-hearts-logo_b31fd195.png";
+const LOGO_URL = "/faithful-hearts-logo.svg";
 
 const ZAMBIA_LOCATIONS = [
   "Lusaka", "Kitwe", "Ndola", "Kabwe", "Chingola", "Mufulira",

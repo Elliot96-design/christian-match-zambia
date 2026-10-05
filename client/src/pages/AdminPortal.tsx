@@ -2,10 +2,11 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Globe, User, Lock, Shield, Eye, EyeOff, ChevronRight, Crown } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { setAuthToken } from "@/_core/hooks/useAuth";
 import { toast } from "sonner";
 
 const CROSS_BG =
-  "https://d2xsxph8kpxj0f.cloudfront.net/310519663207673551/H429gEWUZrF7HRGamYp8WC/admin-portal-cross-bg-V8d6sXFsGrR9XmxNcHwQGe.webp";
+  "/faithful-hearts-bible-bg.svg";
 
 const PANEL_ROUTES: Record<string, string> = {
   finance: "/admin/finance",
@@ -51,6 +52,7 @@ export default function AdminPortal() {
   // ── Username + password mutation ────────────────────────────────────────────
   const loginMutation = trpc.auth.adminPortalLogin.useMutation({
     onSuccess: (data) => {
+      setAuthToken(data.token);
       storeAdminSession(data.adminPanel, rememberMe);
       toast.success("Welcome back — redirecting to your dashboard...");
       navigate(PANEL_ROUTES[data.adminPanel] ?? "/admin/super");
@@ -64,6 +66,7 @@ export default function AdminPortal() {
   // ── PIN-only mutation ───────────────────────────────────────────────────────
   const pinLoginMutation = trpc.auth.adminPortalLoginByPin.useMutation({
     onSuccess: (data) => {
+      setAuthToken(data.token);
       storeAdminSession(data.adminPanel, false);
       toast.success("PIN accepted — redirecting...");
       navigate(PANEL_ROUTES[data.adminPanel] ?? "/admin/super");

@@ -11,7 +11,7 @@ import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import { LOGO_URL } from "@/components/AppHeader";
 
-const BIBLE_VERSE_BG = "/manus-storage/bible-verse-cross-bg_a3f425f7.jpg";
+const BIBLE_VERSE_BG = "/faithful-hearts-bible-bg.svg";
 
 const DAILY_VERSES = [
   {
