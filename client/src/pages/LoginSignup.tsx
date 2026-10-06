@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 import { LOGO_URL } from "@/components/AppHeader";
+import { readableAuthError } from "@/lib/auth-errors";
 
 export default function LoginSignup() {
   const { isAuthenticated, loading } = useAuth();
@@ -16,8 +17,8 @@ export default function LoginSignup() {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const utils = trpc.useUtils();
-  const login = trpc.auth.login.useMutation({ onSuccess: ({ token }) => { setAuthToken(token); utils.auth.me.invalidate(); navigate("/browse"); } });
-  const register = trpc.auth.register.useMutation({ onSuccess: ({ token }) => { setAuthToken(token); utils.auth.me.invalidate(); navigate("/setup"); } });
+  const login = trpc.auth.login.useMutation({ onSuccess: async ({ token }) => { setAuthToken(token); await utils.auth.me.invalidate(); navigate("/browse"); } });
+  const register = trpc.auth.register.useMutation({ onSuccess: async ({ token }) => { setAuthToken(token); await utils.auth.me.invalidate(); navigate("/setup"); } });
 
   useEffect(() => {
     if (!loading && isAuthenticated) navigate("/browse");
@@ -133,9 +134,26 @@ export default function LoginSignup() {
           onClick={async () => {
             setError("");
             try {
-              if (tab === "login") await login.mutateAsync({ email, password });
-              else await register.mutateAsync({ email, password, name: name || undefined });
-            } catch (err) { setError(err instanceof Error ? err.message : "Unable to authenticate"); }
+              const normalizedEmail = email.trim().toLowerCase();
+              if (!normalizedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+                setError("Please enter a valid email address.");
+                return;
+              }
+              if (!password) {
+                setError("Please enter your password.");
+                return;
+              }
+              if (tab === "signup" && password.length < 8) {
+                setError("Password must be at least 8 characters.");
+                return;
+              }
+              if (tab === "signup" && name.trim().length === 1) {
+                setError("Please enter your full name.");
+                return;
+              }
+              if (tab === "login") await login.mutateAsync({ email: normalizedEmail, password });
+              else await register.mutateAsync({ email: normalizedEmail, password, name: name.trim() || undefined });
+            } catch (err) { setError(readableAuthError(err, tab)); }
           }}
           className="btn-purple flex items-center justify-center w-full text-sm font-bold"
           style={{ height: "52px", borderRadius: "16px" }}

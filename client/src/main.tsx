@@ -5,7 +5,7 @@ import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
-import { getAuthToken } from "./_core/hooks/useAuth";
+import { clearAuthToken, getAuthToken } from "./_core/hooks/useAuth";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -14,10 +14,11 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
   if (!(error instanceof TRPCClientError)) return;
   if (typeof window === "undefined") return;
 
-  const isUnauthorized = error.message === UNAUTHED_ERR_MSG;
+  const isUnauthorized = error.message === UNAUTHED_ERR_MSG || error.data?.code === "UNAUTHORIZED";
 
   if (!isUnauthorized) return;
 
+  clearAuthToken();
   if (window.location.pathname !== "/login") window.location.href = "/login";
 };
 
@@ -43,12 +44,12 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        const headers = new Headers(init?.headers);
+        const token = getAuthToken();
+        if (token) headers.set("Authorization", `Bearer ${token}`);
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          headers: {
-            ...(init?.headers ?? {}),
-            ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
-          },
+          headers,
           credentials: "include",
         });
       },

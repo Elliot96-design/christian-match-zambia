@@ -106,23 +106,35 @@ export const appRouter = router({
     register: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(2).max(64).optional() }))
       .mutation(async ({ input }) => {
-        const email = input.email.trim().toLowerCase();
-        if (await getUserByEmail(email)) {
-          throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+        try {
+          const email = input.email.trim().toLowerCase();
+          if (await getUserByEmail(email)) {
+            throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
+          }
+          const user = await createLocalUser({ email, passwordHash: await hashPassword(input.password), name: input.name?.trim() });
+          return { token: await createAuthToken(user.id), user };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          console.error("[Auth] Registration failed:", error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Account creation is temporarily unavailable. Please try again." });
         }
-        const user = await createLocalUser({ email, passwordHash: await hashPassword(input.password), name: input.name?.trim() });
-        return { token: await createAuthToken(user.id), user };
       }),
     login: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
       .mutation(async ({ input }) => {
-        const user = await getUserByEmail(input.email.trim().toLowerCase());
-        if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
-          throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
+        try {
+          const user = await getUserByEmail(input.email.trim().toLowerCase());
+          if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+            throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
+          }
+          if (user.isBanned) throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
+          await touchUserLogin(user.id);
+          return { token: await createAuthToken(user.id), user };
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          console.error("[Auth] Login failed:", error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Login is temporarily unavailable. Please try again." });
         }
-        if (user.isBanned) throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
-        await touchUserLogin(user.id);
-        return { token: await createAuthToken(user.id), user };
       }),
     // Login with username + password (no PIN required)
     adminPortalLogin: publicProcedure
