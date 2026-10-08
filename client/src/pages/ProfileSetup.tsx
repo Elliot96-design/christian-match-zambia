@@ -36,6 +36,10 @@ export default function ProfileSetup() {
     onSuccess: () => utils.auth.me.invalidate(),
   });
   const uploadPhoto = trpc.profile.uploadPhoto.useMutation();
+  const resendVerification = trpc.auth.resendVerification.useMutation({
+    onSuccess: () => toast.success("If your account needs verification, a new link has been sent."),
+    onError: () => toast.error("Could not resend the verification email. Please try again."),
+  });
 
   useEffect(() => {
     if (!loading && !isAuthenticated) navigate("/");
@@ -116,6 +120,15 @@ export default function ProfileSetup() {
       </div>
 
       <div className="container py-6 flex-1">
+        {user?.email && !user.emailVerified && (
+          <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <p className="font-semibold">Verify your email</p>
+            <p className="mt-1 text-xs text-amber-800">Check your inbox to secure your account and receive important updates.</p>
+            <button disabled={resendVerification.isPending} onClick={() => resendVerification.mutate({ email: user.email! })} className="mt-3 text-xs font-bold underline">
+              {resendVerification.isPending ? "Sending…" : "Resend verification link"}
+            </button>
+          </div>
+        )}
         {step === 1 ? (
           <div className="space-y-5">
             <div>

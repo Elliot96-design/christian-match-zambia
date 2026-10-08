@@ -121,7 +121,7 @@ export default function LoginSignup() {
 
         {tab === "login" && (
           <div className="flex justify-end">
-            <button className="text-xs text-primary font-medium">Forgot Password?</button>
+            <button onClick={() => navigate("/forgot-password")} className="text-xs text-primary font-medium">Forgot Password?</button>
           </div>
         )}
 

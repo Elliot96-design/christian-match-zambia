@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   Announcement,
@@ -30,6 +30,8 @@ import {
   swipes,
   userPhotos,
   users,
+  emailVerificationTokens,
+  passwordResetTokens,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -118,6 +120,50 @@ export async function createLocalUser(data: {
   const user = await getUserById(insertId);
   if (!user) throw new Error("Failed to create user");
   return user;
+}
+
+export async function createEmailVerificationToken(userId: number, tokenHash: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(emailVerificationTokens).where(eq(emailVerificationTokens.userId, userId));
+  await db.insert(emailVerificationTokens).values({ userId, tokenHash, expiresAt });
+}
+
+export async function verifyEmailWithToken(tokenHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const rows = await db.select().from(emailVerificationTokens).where(and(
+    eq(emailVerificationTokens.tokenHash, tokenHash),
+    isNull(emailVerificationTokens.usedAt),
+    gt(emailVerificationTokens.expiresAt, new Date()),
+  )).limit(1);
+  const token = rows[0];
+  if (!token) return false;
+  await db.update(emailVerificationTokens).set({ usedAt: new Date() }).where(and(eq(emailVerificationTokens.id, token.id), isNull(emailVerificationTokens.usedAt)));
+  await db.update(users).set({ emailVerified: true }).where(eq(users.id, token.userId));
+  return true;
+}
+
+export async function createPasswordResetToken(userId: number, tokenHash: string, expiresAt: Date) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+  await db.insert(passwordResetTokens).values({ userId, tokenHash, expiresAt });
+}
+
+export async function resetPasswordWithToken(tokenHash: string, passwordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const rows = await db.select().from(passwordResetTokens).where(and(
+    eq(passwordResetTokens.tokenHash, tokenHash),
+    isNull(passwordResetTokens.usedAt),
+    gt(passwordResetTokens.expiresAt, new Date()),
+  )).limit(1);
+  const token = rows[0];
+  if (!token) return false;
+  await db.update(passwordResetTokens).set({ usedAt: new Date() }).where(and(eq(passwordResetTokens.id, token.id), isNull(passwordResetTokens.usedAt)));
+  await db.update(users).set({ passwordHash, emailVerified: true, lastSignedIn: new Date() }).where(eq(users.id, token.userId));
+  return true;
 }
 
 export async function touchUserLogin(userId: number): Promise<void> {

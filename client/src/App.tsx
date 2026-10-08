@@ -24,12 +24,18 @@ import AnnouncementsAdmin from "./pages/admin/AnnouncementsAdmin";
 import RolesAdmin from "./pages/admin/RolesAdmin";
 import SuperAdmin from "./pages/admin/SuperAdmin";
 import AdminGuard from "./components/AdminGuard";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/login" component={LoginSignup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
+      <Route path="/reset-password" component={ResetPassword} />
+      <Route path="/verify-email" component={VerifyEmail} />
       <Route path="/setup" component={ProfileSetup} />
       <Route path="/browse" component={Browse} />
       <Route path="/profile/:id" component={ProfileView} />

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
+import { createHash, randomBytes } from "node:crypto";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "development-only-change-me");
 
@@ -35,4 +36,12 @@ export async function verifyAuthToken(token: string): Promise<AuthTokenPayload |
 export function getBearerToken(header?: string) {
   if (!header?.startsWith("Bearer ")) return null;
   return header.slice("Bearer ".length).trim() || null;
+}
+
+export function createOneTimeToken() {
+  return randomBytes(32).toString("hex");
+}
+
+export function hashOneTimeToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
 }

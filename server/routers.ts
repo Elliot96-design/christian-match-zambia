@@ -82,10 +82,16 @@ import {
   getUserByEmail,
   createLocalUser,
   touchUserLogin,
+  createEmailVerificationToken,
+  verifyEmailWithToken,
+  createPasswordResetToken,
+  resetPasswordWithToken,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
-import { createAuthToken, hashPassword, verifyPassword } from "./auth";
+import { createAuthToken, createOneTimeToken, hashOneTimeToken, hashPassword, verifyPassword } from "./auth";
+import { sendPasswordResetEmail, sendVerificationEmail } from "./email";
+import { checkLoginRateLimit, clearLoginAttempts, recordFailedLogin } from "./rate-limit";
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -112,7 +118,15 @@ export const appRouter = router({
             throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
           }
           const user = await createLocalUser({ email, passwordHash: await hashPassword(input.password), name: input.name?.trim() });
-          return { token: await createAuthToken(user.id), user };
+          const verificationToken = createOneTimeToken();
+          await createEmailVerificationToken(user.id, hashOneTimeToken(verificationToken), new Date(Date.now() + 24 * 60 * 60 * 1000));
+          let verificationDelivered = false;
+          try {
+            verificationDelivered = (await sendVerificationEmail(email, verificationToken)).delivered;
+          } catch (emailError) {
+            console.error("[Auth] Verification email delivery failed:", emailError);
+          }
+          return { token: await createAuthToken(user.id), user, verificationDelivered };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
           console.error("[Auth] Registration failed:", error);
@@ -121,13 +135,24 @@ export const appRouter = router({
       }),
     login: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const email = input.email.trim().toLowerCase();
+        const key = `${ctx.req.ip ?? "unknown"}:${email}`;
+        const rate = checkLoginRateLimit(key);
+        if (!rate.allowed) {
+          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Too many failed attempts. Try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minutes.` });
+        }
         try {
-          const user = await getUserByEmail(input.email.trim().toLowerCase());
+          const user = await getUserByEmail(email);
           if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
+            recordFailedLogin(key);
             throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
           }
-          if (user.isBanned) throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
+          if (user.isBanned) {
+            recordFailedLogin(key);
+            throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
+          }
+          clearLoginAttempts(key);
           await touchUserLogin(user.id);
           return { token: await createAuthToken(user.id), user };
         } catch (error) {
@@ -136,25 +161,98 @@ export const appRouter = router({
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Login is temporarily unavailable. Please try again." });
         }
       }),
+    requestPasswordReset: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        try {
+          const user = await getUserByEmail(input.email.trim().toLowerCase());
+          if (user?.email && user.passwordHash) {
+            const token = createOneTimeToken();
+            await createPasswordResetToken(user.id, hashOneTimeToken(token), new Date(Date.now() + 60 * 60 * 1000));
+            try {
+              await sendPasswordResetEmail(user.email, token);
+            } catch (error) {
+              console.error("[Auth] Password reset email delivery failed:", error);
+            }
+          }
+        } catch (error) {
+          console.error("[Auth] Password reset request failed:", error);
+        }
+        return { success: true, message: "If an account exists for that email, reset instructions have been sent." } as const;
+      }),
+    resetPassword: publicProcedure
+      .input(z.object({ token: z.string().min(32), password: z.string().min(8) }))
+      .mutation(async ({ input }) => {
+        try {
+          const success = await resetPasswordWithToken(hashOneTimeToken(input.token), await hashPassword(input.password));
+          if (!success) throw new TRPCError({ code: "BAD_REQUEST", message: "This reset link is invalid or has expired." });
+          return { success: true } as const;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          console.error("[Auth] Password reset failed:", error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Password reset is temporarily unavailable. Please try again." });
+        }
+      }),
+    verifyEmail: publicProcedure
+      .input(z.object({ token: z.string().min(32) }))
+      .mutation(async ({ input }) => {
+        try {
+          const success = await verifyEmailWithToken(hashOneTimeToken(input.token));
+          if (!success) throw new TRPCError({ code: "BAD_REQUEST", message: "This verification link is invalid or has expired." });
+          return { success: true } as const;
+        } catch (error) {
+          if (error instanceof TRPCError) throw error;
+          console.error("[Auth] Email verification failed:", error);
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Email verification is temporarily unavailable. Please try again." });
+        }
+      }),
+    resendVerification: publicProcedure
+      .input(z.object({ email: z.string().email() }))
+      .mutation(async ({ input }) => {
+        try {
+          const user = await getUserByEmail(input.email.trim().toLowerCase());
+          if (user?.email && !user.emailVerified && user.passwordHash) {
+            const token = createOneTimeToken();
+            await createEmailVerificationToken(user.id, hashOneTimeToken(token), new Date(Date.now() + 24 * 60 * 60 * 1000));
+            try {
+              await sendVerificationEmail(user.email, token);
+            } catch (error) {
+              console.error("[Auth] Verification email delivery failed:", error);
+            }
+          }
+        } catch (error) {
+          console.error("[Auth] Verification resend failed:", error);
+        }
+        return { success: true, message: "If your account needs verification, a new link has been sent." } as const;
+      }),
     // Login with username + password (no PIN required)
     adminPortalLogin: publicProcedure
       .input(z.object({ username: z.string().min(1), password: z.string().min(1) }))
       .mutation(async ({ input, ctx }) => {
+        const key = `admin:${ctx.req.ip ?? "unknown"}:${input.username.trim().toLowerCase()}`;
+        const rate = checkLoginRateLimit(key);
+        if (!rate.allowed) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Too many failed attempts. Try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minutes.` });
         const bcrypt = await import("bcryptjs");
         const admin = await getAdminByUsername(input.username);
         if (!admin || !admin.adminPasswordHash) {
+          recordFailedLogin(key);
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
         const passwordOk = await bcrypt.compare(input.password, admin.adminPasswordHash);
         if (!passwordOk) {
+          recordFailedLogin(key);
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
+        clearLoginAttempts(key);
         return { success: true, adminPanel: admin.adminPanel ?? "users", token: await createAuthToken(admin.id) } as const;
       }),
     // Login with PIN only (no username/password required)
     adminPortalLoginByPin: publicProcedure
       .input(z.object({ pin: z.string().length(4).regex(/^\d{4}$/) }))
       .mutation(async ({ input, ctx }) => {
+        const key = `admin-pin:${ctx.req.ip ?? "unknown"}`;
+        const rate = checkLoginRateLimit(key);
+        if (!rate.allowed) throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Too many failed attempts. Try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minutes.` });
         const bcrypt = await import("bcryptjs");
         const admins = await getAllAdminHashedPins();
         let matched: typeof admins[0] | null = null;
@@ -165,8 +263,10 @@ export const appRouter = router({
           }
         }
         if (!matched) {
+          recordFailedLogin(key);
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid PIN" });
         }
+        clearLoginAttempts(key);
         return { success: true, adminPanel: matched.adminPanel ?? "users", token: await createAuthToken(matched.id) } as const;
       }),
   }),
