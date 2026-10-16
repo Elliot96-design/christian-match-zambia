@@ -8,6 +8,7 @@ const dbMocks = vi.hoisted(() => ({
   getUserByEmail: vi.fn(),
   createLocalUser: vi.fn(),
   createEmailVerificationToken: vi.fn(),
+  recordSecurityEvent: vi.fn(),
 }));
 
 vi.mock("./db", async () => {

@@ -32,6 +32,7 @@ import {
   users,
   emailVerificationTokens,
   passwordResetTokens,
+  securityAuditLogs,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -170,6 +171,34 @@ export async function touchUserLogin(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   await db.update(users).set({ lastSignedIn: new Date() }).where(eq(users.id, userId));
+}
+
+export async function recordSecurityEvent(event: {
+  action: string;
+  userId?: number;
+  email?: string;
+  ipAddress?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  try {
+    const db = await getDb();
+    if (!db) return;
+    await db.insert(securityAuditLogs).values({
+      action: event.action,
+      userId: event.userId,
+      email: event.email,
+      ipAddress: event.ipAddress,
+      metadata: event.metadata ? JSON.stringify(event.metadata) : null,
+    });
+  } catch (error) {
+    console.error("[Security] Failed to write audit event:", error);
+  }
+}
+
+export async function getSecurityAuditLogs(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(securityAuditLogs).orderBy(desc(securityAuditLogs.createdAt)).limit(Math.min(limit, 500));
 }
 
 export async function getUserById(id: number): Promise<User | undefined> {

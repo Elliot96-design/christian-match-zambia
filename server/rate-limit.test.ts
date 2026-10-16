@@ -6,7 +6,9 @@ describe("login rate limiting", () => {
 
   it("blocks repeated failed attempts and clears a successful account", () => {
     const key = "127.0.0.1:test@example.com";
-    for (let i = 0; i < 8; i++) recordFailedLogin(key);
+    for (let i = 0; i < 3; i++) recordFailedLogin(key);
+    expect(checkLoginRateLimit(key).requiresCaptcha).toBe(true);
+    for (let i = 0; i < 5; i++) recordFailedLogin(key);
     expect(checkLoginRateLimit(key).allowed).toBe(false);
     clearLoginAttempts(key);
     expect(checkLoginRateLimit(key).allowed).toBe(true);

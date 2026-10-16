@@ -18,6 +18,10 @@ SMTP_SECURE=false
 SMTP_USER=your-smtp-user
 SMTP_PASSWORD=your-smtp-password
 SMTP_FROM=Faithful Hearts <no-reply@example.com>
+
+# Optional Cloudflare Turnstile CAPTCHA (required in production if enabled)
+TURNSTILE_SECRET_KEY=your-cloudflare-turnstile-secret
+VITE_TURNSTILE_SITE_KEY=your-cloudflare-turnstile-site-key
 ```
 
-`DATABASE_URL` must point to a MySQL-compatible database. Use a long, random `JWT_SECRET` in production. `UPLOAD_DIR` can be an absolute path when the process runs outside the project directory. When SMTP is omitted, development runs still print one-time links to the server log; configure SMTP before production use.
+`DATABASE_URL` must point to a MySQL-compatible database. Use a long, random `JWT_SECRET` in production. `UPLOAD_DIR` can be an absolute path when the process runs outside the project directory. Configure SMTP before production use so verification and reset emails are delivered. If Turnstile is configured, set both keys; after repeated failed logins the UI will require the CAPTCHA challenge.

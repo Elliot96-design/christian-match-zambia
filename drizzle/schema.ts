@@ -80,6 +80,18 @@ export const passwordResetTokens = mysqlTable("password_reset_tokens", {
 export type EmailVerificationToken = typeof emailVerificationTokens.$inferSelect;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
+export const securityAuditLogs = mysqlTable("security_audit_logs", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId"),
+  email: varchar("email", { length: 320 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  metadata: text("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type SecurityAuditLog = typeof securityAuditLogs.$inferSelect;
+
 // Tracks which user pairs have unlocked chat (payment confirmed)
 export const chatUnlocks = mysqlTable("chat_unlocks", {
   id: int("id").autoincrement().primaryKey(),

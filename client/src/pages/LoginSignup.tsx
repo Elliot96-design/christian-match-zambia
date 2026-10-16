@@ -6,6 +6,7 @@ import { useLocation } from "wouter";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 import { LOGO_URL } from "@/components/AppHeader";
 import { readableAuthError } from "@/lib/auth-errors";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 export default function LoginSignup() {
   const { isAuthenticated, loading } = useAuth();
@@ -16,6 +17,9 @@ export default function LoginSignup() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined;
   const utils = trpc.useUtils();
   const login = trpc.auth.login.useMutation({ onSuccess: async ({ token }) => { setAuthToken(token); await utils.auth.me.invalidate(); navigate("/browse"); } });
   const register = trpc.auth.register.useMutation({ onSuccess: async ({ token }) => { setAuthToken(token); await utils.auth.me.invalidate(); navigate("/setup"); } });
@@ -151,15 +155,27 @@ export default function LoginSignup() {
                 setError("Please enter your full name.");
                 return;
               }
-              if (tab === "login") await login.mutateAsync({ email: normalizedEmail, password });
+              if (tab === "login") await login.mutateAsync({ email: normalizedEmail, password, captchaToken: captchaToken || undefined });
               else await register.mutateAsync({ email: normalizedEmail, password, name: name.trim() || undefined });
-            } catch (err) { setError(readableAuthError(err, tab)); }
+            } catch (err) {
+              const message = readableAuthError(err, tab);
+              if (tab === "login" && message.toLowerCase().includes("security check")) setCaptchaRequired(true);
+              setError(message);
+            }
           }}
           className="btn-purple flex items-center justify-center w-full text-sm font-bold"
           style={{ height: "52px", borderRadius: "16px" }}
         >
           {login.isPending || register.isPending ? "Please wait…" : tab === "login" ? "Log In" : "Create Account"}
         </button>
+        {tab === "login" && captchaRequired && turnstileSiteKey && (
+          <div className="flex justify-center pt-1">
+            <Turnstile siteKey={turnstileSiteKey} onSuccess={setCaptchaToken} onExpire={() => setCaptchaToken("")} />
+          </div>
+        )}
+        {tab === "login" && captchaRequired && !turnstileSiteKey && (
+          <p className="text-xs text-red-600 text-center">Security verification is not configured. Please contact support.</p>
+        )}
       </div>
 
       {/* Divider */}

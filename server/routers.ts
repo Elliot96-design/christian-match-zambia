@@ -86,12 +86,15 @@ import {
   verifyEmailWithToken,
   createPasswordResetToken,
   resetPasswordWithToken,
+  recordSecurityEvent,
+  getSecurityAuditLogs,
 } from "./db";
 import { storagePut } from "./storage";
 import { nanoid } from "nanoid";
 import { createAuthToken, createOneTimeToken, hashOneTimeToken, hashPassword, verifyPassword } from "./auth";
 import { sendPasswordResetEmail, sendVerificationEmail } from "./email";
 import { checkLoginRateLimit, clearLoginAttempts, recordFailedLogin } from "./rate-limit";
+import { isTurnstileConfigured, verifyTurnstileToken } from "./turnstile";
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -111,13 +114,14 @@ export const appRouter = router({
     }),
     register: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(2).max(64).optional() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const email = input.email.trim().toLowerCase();
           if (await getUserByEmail(email)) {
             throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists." });
           }
           const user = await createLocalUser({ email, passwordHash: await hashPassword(input.password), name: input.name?.trim() });
+          void recordSecurityEvent({ action: "register_success", userId: user.id, email, ipAddress: ctx.req.ip });
           const verificationToken = createOneTimeToken();
           await createEmailVerificationToken(user.id, hashOneTimeToken(verificationToken), new Date(Date.now() + 24 * 60 * 60 * 1000));
           let verificationDelivered = false;
@@ -134,26 +138,35 @@ export const appRouter = router({
         }
       }),
     login: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+      .input(z.object({ email: z.string().email(), password: z.string().min(1), captchaToken: z.string().optional() }))
       .mutation(async ({ input, ctx }) => {
         const email = input.email.trim().toLowerCase();
         const key = `${ctx.req.ip ?? "unknown"}:${email}`;
         const rate = checkLoginRateLimit(key);
         if (!rate.allowed) {
+          void recordSecurityEvent({ action: "login_rate_limited", email, ipAddress: ctx.req.ip });
           throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Too many failed attempts. Try again in ${Math.ceil(rate.retryAfterSeconds / 60)} minutes.` });
+        }
+        if (rate.requiresCaptcha && isTurnstileConfigured() && !(await verifyTurnstileToken(input.captchaToken, ctx.req.ip))) {
+          recordFailedLogin(key);
+          void recordSecurityEvent({ action: "login_captcha_failed", email, ipAddress: ctx.req.ip });
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "Please complete the security check and try again." });
         }
         try {
           const user = await getUserByEmail(email);
           if (!user?.passwordHash || !(await verifyPassword(input.password, user.passwordHash))) {
             recordFailedLogin(key);
+            void recordSecurityEvent({ action: "login_failed", email, ipAddress: ctx.req.ip });
             throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid email or password." });
           }
           if (user.isBanned) {
             recordFailedLogin(key);
+            void recordSecurityEvent({ action: "login_blocked_banned", userId: user.id, email, ipAddress: ctx.req.ip });
             throw new TRPCError({ code: "FORBIDDEN", message: "This account has been suspended." });
           }
           clearLoginAttempts(key);
           await touchUserLogin(user.id);
+          void recordSecurityEvent({ action: "login_success", userId: user.id, email, ipAddress: ctx.req.ip });
           return { token: await createAuthToken(user.id), user };
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -163,9 +176,11 @@ export const appRouter = router({
       }),
     requestPasswordReset: publicProcedure
       .input(z.object({ email: z.string().email() }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const normalizedEmail = input.email.trim().toLowerCase();
+        void recordSecurityEvent({ action: "password_reset_requested", email: normalizedEmail, ipAddress: ctx.req.ip });
         try {
-          const user = await getUserByEmail(input.email.trim().toLowerCase());
+          const user = await getUserByEmail(normalizedEmail);
           if (user?.email && user.passwordHash) {
             const token = createOneTimeToken();
             await createPasswordResetToken(user.id, hashOneTimeToken(token), new Date(Date.now() + 60 * 60 * 1000));
@@ -182,10 +197,11 @@ export const appRouter = router({
       }),
     resetPassword: publicProcedure
       .input(z.object({ token: z.string().min(32), password: z.string().min(8) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const success = await resetPasswordWithToken(hashOneTimeToken(input.token), await hashPassword(input.password));
           if (!success) throw new TRPCError({ code: "BAD_REQUEST", message: "This reset link is invalid or has expired." });
+          void recordSecurityEvent({ action: "password_reset_success", ipAddress: ctx.req.ip });
           return { success: true } as const;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -195,10 +211,11 @@ export const appRouter = router({
       }),
     verifyEmail: publicProcedure
       .input(z.object({ token: z.string().min(32) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const success = await verifyEmailWithToken(hashOneTimeToken(input.token));
           if (!success) throw new TRPCError({ code: "BAD_REQUEST", message: "This verification link is invalid or has expired." });
+          void recordSecurityEvent({ action: "email_verification_success", ipAddress: ctx.req.ip });
           return { success: true } as const;
         } catch (error) {
           if (error instanceof TRPCError) throw error;
@@ -236,14 +253,17 @@ export const appRouter = router({
         const admin = await getAdminByUsername(input.username);
         if (!admin || !admin.adminPasswordHash) {
           recordFailedLogin(key);
+          void recordSecurityEvent({ action: "admin_login_failed", email: input.username, ipAddress: ctx.req.ip });
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
         const passwordOk = await bcrypt.compare(input.password, admin.adminPasswordHash);
         if (!passwordOk) {
           recordFailedLogin(key);
+          void recordSecurityEvent({ action: "admin_login_failed", userId: admin.id, email: input.username, ipAddress: ctx.req.ip });
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid credentials" });
         }
         clearLoginAttempts(key);
+        void recordSecurityEvent({ action: "admin_login_success", userId: admin.id, email: input.username, ipAddress: ctx.req.ip });
         return { success: true, adminPanel: admin.adminPanel ?? "users", token: await createAuthToken(admin.id) } as const;
       }),
     // Login with PIN only (no username/password required)
@@ -264,11 +284,16 @@ export const appRouter = router({
         }
         if (!matched) {
           recordFailedLogin(key);
+          void recordSecurityEvent({ action: "admin_pin_failed", ipAddress: ctx.req.ip });
           throw new TRPCError({ code: "UNAUTHORIZED", message: "Invalid PIN" });
         }
         clearLoginAttempts(key);
+        void recordSecurityEvent({ action: "admin_pin_success", userId: matched.id, ipAddress: ctx.req.ip });
         return { success: true, adminPanel: matched.adminPanel ?? "users", token: await createAuthToken(matched.id) } as const;
       }),
+    securityAuditLogs: adminProcedure
+      .input(z.object({ limit: z.number().int().min(1).max(500).optional() }).optional())
+      .query(({ input }) => getSecurityAuditLogs(input?.limit ?? 100)),
   }),
 
   // ─── Profile ──────────────────────────────────────────────────────────────
