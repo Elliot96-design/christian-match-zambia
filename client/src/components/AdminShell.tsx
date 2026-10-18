@@ -35,8 +35,9 @@ export default function AdminShell({ panelId, title, subtitle, children }: Admin
       localStorage.removeItem("adminSessionToken");
       localStorage.removeItem("adminSessionExpiry");
       localStorage.removeItem("adminPanel");
+      localStorage.removeItem("faithful-hearts-token");
       toast.success("Logged out of admin portal");
-      navigate("/admin-portal");
+      navigate("/");
     },
   });
 

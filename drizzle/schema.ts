@@ -5,6 +5,7 @@ import {
   mysqlTable,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/mysql-core";
 
@@ -91,6 +92,19 @@ export const securityAuditLogs = mysqlTable("security_audit_logs", {
 });
 
 export type SecurityAuditLog = typeof securityAuditLogs.$inferSelect;
+
+export const socialAccounts = mysqlTable("social_accounts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  provider: varchar("provider", { length: 16 }).notNull(),
+  providerAccountId: varchar("providerAccountId", { length: 255 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  providerAccountUnique: uniqueIndex("social_accounts_provider_account_unique").on(table.provider, table.providerAccountId),
+}));
+
+export type SocialAccount = typeof socialAccounts.$inferSelect;
 
 // Tracks which user pairs have unlocked chat (payment confirmed)
 export const chatUnlocks = mysqlTable("chat_unlocks", {

@@ -95,6 +95,7 @@ import { createAuthToken, createOneTimeToken, hashOneTimeToken, hashPassword, ve
 import { sendPasswordResetEmail, sendVerificationEmail } from "./email";
 import { checkLoginRateLimit, clearLoginAttempts, recordFailedLogin } from "./rate-limit";
 import { isTurnstileConfigured, verifyTurnstileToken } from "./turnstile";
+import { consumeSocialLoginCode } from "./social-auth";
 
 // ─── Admin guard ──────────────────────────────────────────────────────────────
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
@@ -108,6 +109,16 @@ export const appRouter = router({
 
   auth: router({
     me: publicProcedure.query((opts) => opts.ctx.user),
+    exchangeSocialCode: publicProcedure
+      .input(z.object({ code: z.string().min(32) }))
+      .mutation(async ({ input, ctx }) => {
+        const exchange = consumeSocialLoginCode(input.code);
+        if (!exchange) throw new TRPCError({ code: "UNAUTHORIZED", message: "This social sign-in session has expired. Please try again." });
+        const user = await getUserById(exchange.userId);
+        if (!user || user.isBanned) throw new TRPCError({ code: "FORBIDDEN", message: "This account cannot sign in." });
+        void recordSecurityEvent({ action: "social_session_issued", userId: user.id, email: user.email ?? undefined, ipAddress: ctx.req.ip });
+        return { token: await createAuthToken(user.id), user };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       ctx.res.clearCookie(COOKIE_NAME, { ...getSessionCookieOptions(ctx.req), maxAge: -1 });
       return { success: true } as const;

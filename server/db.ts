@@ -33,6 +33,7 @@ import {
   emailVerificationTokens,
   passwordResetTokens,
   securityAuditLogs,
+  socialAccounts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -99,6 +100,38 @@ export async function getUserByEmail(email: string): Promise<User | undefined> {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return result[0];
+}
+
+export async function getSocialAccount(provider: string, providerAccountId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(socialAccounts).where(and(eq(socialAccounts.provider, provider), eq(socialAccounts.providerAccountId, providerAccountId))).limit(1);
+  return result[0];
+}
+
+export async function createSocialUser(data: { provider: string; providerAccountId: string; email: string; name?: string; photoUrl?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  const result = await db.insert(users).values({
+    openId: `social_${data.provider}_${crypto.randomUUID()}`,
+    email: data.email,
+    name: data.name || null,
+    photoUrl: data.photoUrl || null,
+    loginMethod: data.provider,
+    emailVerified: true,
+    lastSignedIn: new Date(),
+  });
+  const userId = Number((result[0] as { insertId: number }).insertId);
+  await db.insert(socialAccounts).values({ userId, provider: data.provider, providerAccountId: data.providerAccountId, email: data.email });
+  const user = await getUserById(userId);
+  if (!user) throw new Error("Failed to create social user");
+  return user;
+}
+
+export async function linkSocialAccount(userId: number, provider: string, providerAccountId: string, email?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not configured");
+  await db.insert(socialAccounts).values({ userId, provider, providerAccountId, email });
 }
 
 export async function createLocalUser(data: {
