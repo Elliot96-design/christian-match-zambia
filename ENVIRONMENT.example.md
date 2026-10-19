@@ -34,6 +34,15 @@ APPLE_TEAM_ID=your-apple-team-id
 APPLE_KEY_ID=your-apple-key-id
 APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
 APPLE_REDIRECT_URI=https://your-domain.example/api/auth/social/apple/callback
+
+# Railway-only optional CORS allowlist. Leave blank when frontend and API use the same service/domain.
+CORS_ORIGINS=
 ```
 
 `DATABASE_URL` must point to a MySQL-compatible database. Use a long, random `JWT_SECRET` in production. `UPLOAD_DIR` can be an absolute path when the process runs outside the project directory. Configure SMTP before production use so verification and reset emails are delivered. If Turnstile is configured, set both keys; after repeated failed logins the UI will require the CAPTCHA challenge. For social sign-in, register the exact callback URLs shown above in Google Cloud Console and Apple Developer. Never commit provider secrets or the Apple private key.
+
+## Railway deployment notes
+
+This project is prepared as one Railway service: Express serves the built Vite frontend and the tRPC API from the same HTTPS origin. Railway supplies `PORT`; do not hard-code a production port. The service starts with `pnpm start` after Railway runs `pnpm build`, and its health check is `/healthz`.
+
+After Railway assigns the service domain, set `APP_URL` to that exact HTTPS origin and replace the placeholder Google and Apple redirect URIs with that same domain. For durable profile uploads, attach a Railway Volume mounted at `/data` and set `UPLOAD_DIR=/data/uploads`; otherwise Railway’s local filesystem should be treated as ephemeral.

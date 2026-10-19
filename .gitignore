@@ -9,6 +9,8 @@ build/
 
 # Environment variables
 .env
+.env.*
+!.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -45,6 +47,17 @@ pids
 *.seed
 *.pid.lock
 *.bak
+uploads/
+.manus-logs/
+
+# Credentials and private keys
+*.pem
+*.key
+*.p8
+*.p12
+*.crt
+credentials*.json
+secrets*.json
 
 # Coverage directory used by tools like istanbul
 coverage/
