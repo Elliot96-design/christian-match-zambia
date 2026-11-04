@@ -773,7 +773,7 @@ export default function Browse() {
           targetId={selectedUserId}
           targetName={browseUsers?.find((u) => u.id === selectedUserId)?.name ?? "this member"}
           onClose={() => setShowPayment(false)}
-          onSuccess={() => { setShowPayment(false); navigate(`/chat/${selectedUserId}`); }}
+          onSuccess={() => { setShowPayment(false); }}
         />
       )}
     </div>

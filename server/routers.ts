@@ -14,6 +14,10 @@ import {
   completeChatUnlock,
   countUserPhotos,
   createChatUnlock,
+  getExistingChatPayment,
+  getPaymentByTransactionId,
+  getManualPaymentQueue,
+  reviewChatPayment,
   createPremiumPayment,
   getAllPayments,
   getAllUsers,
@@ -596,28 +600,47 @@ export const appRouter = router({
 
   // ─── Payments ─────────────────────────────────────────────────────────────
   payment: router({
+    configuration: publicProcedure.query(async () => {
+      const keys = [
+        "payment_currency", "chat_unlock_amount", "payment_verification_mode",
+        "payment_mtn_enabled", "payment_mtn_number", "payment_mtn_name", "payment_mtn_instructions", "payment_mtn_reference",
+        "payment_airtel_enabled", "payment_airtel_number", "payment_airtel_name", "payment_airtel_instructions", "payment_airtel_reference",
+        "payment_bank_enabled", "payment_bank_name", "payment_bank_account_name", "payment_bank_account_number",
+        "payment_bank_branch_name", "payment_bank_branch_code", "payment_bank_swift", "payment_bank_instructions", "payment_bank_reference",
+      ];
+      const entries = await Promise.all(keys.map(async (key) => [key, await getAppSetting(key)] as const));
+      const settings = Object.fromEntries(entries);
+      return {
+        currency: settings.payment_currency || "ZMW",
+        amount: Number(settings.chat_unlock_amount || 20),
+        verificationMode: settings.payment_verification_mode || "manual",
+        methods: {
+          mtn: settings.payment_mtn_enabled === "true" && Boolean(settings.payment_mtn_number),
+          airtel: settings.payment_airtel_enabled === "true" && Boolean(settings.payment_airtel_number),
+          bank: settings.payment_bank_enabled === "true" && Boolean(settings.payment_bank_account_number),
+        },
+        details: settings,
+      };
+    }),
     // Initiate a premium subscription payment (K50 first month, K100 after)
     initiatePremium: protectedProcedure
-      .input(z.object({ provider: z.enum(["mtn", "airtel", "visa", "mock"]), phone: z.string().optional() }))
+      .input(z.object({ provider: z.enum(["mtn", "airtel", "bank"]), amount: z.union([z.literal(50), z.literal(250)]), transactionId: z.string().trim().min(3).max(128), senderPhone: z.string().trim().max(32).optional(), senderName: z.string().trim().max(128).optional() }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         if (ctx.user.isPremium) throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
+        if (await getExistingChatPayment(ctx.user.id, 0)) throw new TRPCError({ code: "CONFLICT", message: "A premium payment is already awaiting review." });
+        if (await getPaymentByTransactionId(input.transactionId)) throw new TRPCError({ code: "CONFLICT", message: "This transaction ID has already been submitted." });
+        if ((await getAppSetting(`payment_${input.provider}_enabled`)) !== "true") throw new TRPCError({ code: "BAD_REQUEST", message: "This payment method is not currently available." });
         // K50 for first month, K100 recurring — charge K50 now
-        const id = await createPremiumPayment({ payerId: ctx.user.id, amount: 50, provider: input.provider });
-        return { paymentId: id, amount: 50, provider: input.provider };
+        const id = await createPremiumPayment({ payerId: ctx.user.id, amount: input.amount, provider: input.provider, transactionId: input.transactionId, senderPhone: input.senderPhone, senderName: input.senderName });
+        return { paymentId: id, amount: input.amount, provider: input.provider, status: "pending" as const };
       }),
 
-    // Confirm a premium subscription payment and activate premium
+    // Kept for backwards compatibility; premium activation is Finance Admin-only.
     confirmPremium: protectedProcedure
       .input(z.object({ paymentId: z.number().int(), mockReference: z.string().optional() }))
-      .mutation(async ({ ctx, input }) => {
-        const unlock = await getPendingUnlockById(input.paymentId, ctx.user.id);
-        if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Payment not found or not yours." });
-        if (unlock.status === "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Already completed." });
-        const reference = input.mockReference ?? `PREM-${nanoid(12).toUpperCase()}`;
-        await completeChatUnlock(input.paymentId, reference);
-        await setUserPremium(ctx.user.id, true);
-        return { success: true, reference };
+      .mutation(async () => {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Premium payment is awaiting Finance Admin verification." });
       }),
 
     // Initiate a single-chat unlock payment (K20)
@@ -625,43 +648,49 @@ export const appRouter = router({
       .input(
         z.object({
           targetId: z.number().int(),
-          provider: z.enum(["mtn", "airtel", "mock"]),
-          phone: z.string().optional(),
+          provider: z.enum(["mtn", "airtel", "bank"]),
+          transactionId: z.string().trim().min(3).max(128),
+          senderPhone: z.string().trim().max(32).optional(),
+          senderName: z.string().trim().max(128).optional(),
         })
       )
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         const existing = await getChatUnlock(ctx.user.id, input.targetId);
         if (existing) throw new TRPCError({ code: "BAD_REQUEST", message: "Chat already unlocked." });
+        const pending = await getExistingChatPayment(ctx.user.id, input.targetId);
+        if (pending) throw new TRPCError({ code: "CONFLICT", message: "A payment for this chat is already awaiting review." });
+        const duplicateTransaction = await getPaymentByTransactionId(input.transactionId);
+        if (duplicateTransaction) throw new TRPCError({ code: "CONFLICT", message: "This transaction ID has already been submitted." });
         const target = await getUserById(input.targetId);
         if (!target || target.isBanned) throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
+        const config = await (async () => {
+          const enabled = await getAppSetting(`payment_${input.provider}_enabled`);
+          return enabled === "true";
+        })();
+        if (!config) throw new TRPCError({ code: "BAD_REQUEST", message: "This payment method is not currently available." });
+        const amount = Number((await getAppSetting("chat_unlock_amount")) || 20);
+        const currency = (await getAppSetting("payment_currency")) || "ZMW";
         const id = await createChatUnlock({
           payerId: ctx.user.id,
           targetId: input.targetId,
-          amount: 20,
+          amount,
+          currency,
           provider: input.provider,
           status: "pending",
+          transactionId: input.transactionId,
+          senderPhone: input.senderPhone || null,
+          senderName: input.senderName || null,
+          internalReference: `FH-${nanoid(10).toUpperCase()}`,
         });
-        await createNotification({
-          userId: input.targetId,
-          type: "chat_request",
-          title: "New Chat Request",
-          content: `${ctx.user.name} sent you a chat request. Unlock to reply!`,
-          relatedUserId: ctx.user.id,
-        });
-        return { paymentId: id, amount: 20, provider: input.provider };
+        return { paymentId: id, amount, currency, provider: input.provider, status: "pending" as const };
       }),
 
-    // Confirm a single-chat unlock payment
+    // Kept for backwards compatibility; client-side confirmation can never unlock chat.
     confirm: protectedProcedure
       .input(z.object({ paymentId: z.number().int(), mockReference: z.string().optional() }))
-      .mutation(async ({ ctx, input }) => {
-        const unlock = await getPendingUnlockById(input.paymentId, ctx.user.id);
-        if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Payment not found or not yours." });
-        if (unlock.status === "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Already completed." });
-        const reference = input.mockReference ?? `MOCK-${nanoid(12).toUpperCase()}`;
-        await completeChatUnlock(input.paymentId, reference);
-        return { success: true, reference };
+      .mutation(async () => {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Payment is awaiting Finance Admin verification." });
       }),
   }),
 
@@ -859,19 +888,29 @@ export const appRouter = router({
       return getPremiumPaymentsList();
     }),
     getPendingManualPayments: adminProcedure.query(async () => {
-      return [] as { id: number; amount: number; provider: string; createdAt: Date }[];
+      return getManualPaymentQueue();
     }),
     approveManualPayment: adminProcedure
       .input(z.object({ paymentId: z.number().int() }))
-      .mutation(async ({ input }) => {
-        const unlock = await getPendingUnlockById(input.paymentId, 0);
-        if (!unlock) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
-        if (unlock.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Payment already processed" });
-        
-        const reference = `MAN-${nanoid(12).toUpperCase()}`;
-        await completeChatUnlock(input.paymentId, reference);
-        await setUserPremium(unlock.payerId, true);
-        return { success: true, reference };
+      .mutation(async ({ ctx, input }) => {
+        const payment = (await getManualPaymentQueue()).find((item) => item.id === input.paymentId);
+        if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found or already processed." });
+        if (payment.payerId === ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You cannot approve your own payment." });
+        await reviewChatPayment({ paymentId: input.paymentId, adminId: ctx.user.id, status: "verified" });
+        if (payment.targetId === 0) await setUserPremium(payment.payerId, true);
+        await createNotification({ userId: payment.payerId, type: "chat_request", title: "Payment Verified", content: payment.targetId === 0 ? `Payment ${payment.internalReference ?? `#${payment.id}`} was verified. Premium is now active.` : `Payment ${payment.internalReference ?? `#${payment.id}`} was verified. Your chat is now unlocked.`, relatedUserId: payment.targetId || ctx.user.id });
+        void recordSecurityEvent({ action: "payment_verified", userId: payment.payerId, metadata: { paymentId: payment.id, adminId: ctx.user.id, targetId: payment.targetId } });
+        return { success: true, reference: payment.internalReference };
+      }),
+    rejectManualPayment: adminProcedure
+      .input(z.object({ paymentId: z.number().int(), reason: z.string().trim().min(3).max(500) }))
+      .mutation(async ({ ctx, input }) => {
+        const payment = (await getManualPaymentQueue()).find((item) => item.id === input.paymentId);
+        if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found or already processed." });
+        await reviewChatPayment({ paymentId: input.paymentId, adminId: ctx.user.id, status: "rejected", rejectionReason: input.reason });
+        await createNotification({ userId: payment.payerId, type: "chat_request", title: "Payment Needs Attention", content: `Payment ${payment.internalReference ?? `#${payment.id}`} was rejected: ${input.reason}`, relatedUserId: payment.targetId });
+        void recordSecurityEvent({ action: "payment_rejected", userId: payment.payerId, metadata: { paymentId: payment.id, adminId: ctx.user.id, reason: input.reason } });
+        return { success: true };
       }),
     // ── Support Admin ──────────────────────────────────────────────────────
     supportTickets: adminProcedure.query(async () => {
