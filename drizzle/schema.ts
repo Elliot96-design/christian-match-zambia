@@ -111,27 +111,12 @@ export const chatUnlocks = mysqlTable("chat_unlocks", {
   id: int("id").autoincrement().primaryKey(),
   payerId: int("payerId").notNull(),
   targetId: int("targetId").notNull(),
-  status: mysqlEnum("status", ["pending", "under_review", "verified", "rejected", "expired", "completed", "failed"]).default("pending").notNull(),
+  status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
   amount: int("amount").default(20).notNull(), // K20
-  currency: varchar("currency", { length: 8 }).default("ZMW").notNull(),
-  provider: mysqlEnum("provider", ["mtn", "airtel", "bank", "visa", "mock"]).default("mtn").notNull(),
+  provider: mysqlEnum("provider", ["mtn", "airtel", "mock"]).default("mock").notNull(),
   reference: varchar("reference", { length: 128 }),
-  internalReference: varchar("internalReference", { length: 32 }),
-  transactionId: varchar("transactionId", { length: 128 }),
-  senderPhone: varchar("senderPhone", { length: 32 }),
-  senderName: varchar("senderName", { length: 128 }),
-  receiptUrl: text("receiptUrl"),
-  rejectionReason: text("rejectionReason"),
-  verificationSource: varchar("verificationSource", { length: 64 }),
-  verifiedBy: int("verifiedBy"),
-  verifiedAt: timestamp("verifiedAt"),
-  reviewNotes: text("reviewNotes"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-}, (table) => ({
-  internalReferenceUnique: uniqueIndex("chat_unlocks_internal_reference_unique").on(table.internalReference),
-  transactionIdUnique: uniqueIndex("chat_unlocks_transaction_id_unique").on(table.transactionId),
-}));
+});
 
 export type ChatUnlock = typeof chatUnlocks.$inferSelect;
 export type InsertChatUnlock = typeof chatUnlocks.$inferInsert;

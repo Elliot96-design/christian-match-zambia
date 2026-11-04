@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
-import { DollarSign, TrendingUp, Users, CreditCard, RefreshCw, Save } from "lucide-react";
-import { toast } from "sonner";
+import { DollarSign, TrendingUp, Users, CreditCard, RefreshCw } from "lucide-react";
 
 function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: React.ReactNode; color: string }) {
   return (
@@ -21,19 +20,11 @@ function StatCard({ label, value, icon, color }: { label: string; value: string 
 export default function FinanceAdmin() {
   const [page, setPage] = useState(0);
   const [approvingId, setApprovingId] = useState<number | null>(null);
-  const [rejectingId, setRejectingId] = useState<number | null>(null);
-  const [paymentSettings, setPaymentSettings] = useState<Record<string, string>>({});
   const PAGE_SIZE = 20;
 
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.stats.useQuery();
   const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = trpc.admin.allPayments.useQuery();
   const { data: pendingManualPayments, isLoading: pendingLoading, refetch: refetchPending } = trpc.admin.getPendingManualPayments.useQuery();
-  const { data: appSettings, refetch: refetchSettings } = trpc.admin.appSettings.useQuery();
-  const updateSetting = trpc.admin.updateSetting.useMutation();
-
-  useEffect(() => {
-    if (appSettings) setPaymentSettings(Object.fromEntries(appSettings.filter((s) => s.settingKey.startsWith("payment_") || s.settingKey === "chat_unlock_amount").map((s) => [s.settingKey, s.settingValue])));
-  }, [appSettings]);
   
   const approvePayment = trpc.admin.approveManualPayment.useMutation({
     onSuccess: () => {
@@ -42,24 +33,11 @@ export default function FinanceAdmin() {
       setApprovingId(null);
     },
   });
-  const rejectPayment = trpc.admin.rejectManualPayment.useMutation({
-    onSuccess: () => { refetchPending(); refetchPayments(); setRejectingId(null); toast.success("Payment rejected"); },
-    onError: (error) => { setRejectingId(null); toast.error(error.message); },
-  });
 
   const paginated = payments?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) ?? [];
   const totalPages = Math.ceil((payments?.length ?? 0) / PAGE_SIZE);
 
-  const handleRefresh = () => { refetchStats(); refetchPayments(); refetchPending(); refetchSettings(); };
-  const setting = (key: string, fallback = "") => paymentSettings[key] ?? fallback;
-  const setSetting = (key: string, value: string) => setPaymentSettings((current) => ({ ...current, [key]: value }));
-  const savePaymentSettings = async () => {
-    try {
-      for (const [key, value] of Object.entries(paymentSettings)) await updateSetting.mutateAsync({ key, value });
-      await refetchSettings();
-      toast.success("Payment settings saved");
-    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not save payment settings"); }
-  };
+  const handleRefresh = () => { refetchStats(); refetchPayments(); refetchPending(); };
 
   const statusColor = (s: string) => {
     if (s === "completed") return "#10b981";
@@ -96,34 +74,6 @@ export default function FinanceAdmin() {
           <StatCard label="Total Payments" value={stats?.totalPayments ?? 0} icon={<Users className="w-4 h-4" />} color="#3b82f6" />
         </div>
       )}
-
-      <div className="mb-6 rounded-xl border border-white/10 p-4" style={{ background: "rgba(255,255,255,0.03)" }}>
-        <div className="flex items-center justify-between mb-4">
-          <div><h3 className="text-white font-semibold text-sm">Payment Receiving Settings</h3><p className="text-white/40 text-xs mt-1">Only enabled methods with receiving details appear to users.</p></div>
-          <button onClick={savePaymentSettings} disabled={updateSetting.isPending} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-white bg-purple-600 hover:bg-purple-500 disabled:opacity-50"><Save className="w-4 h-4" />Save</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(["mtn", "airtel"] as const).map((method) => (
-            <div key={method} className="space-y-2 rounded-lg border border-white/10 p-3">
-              <label className="flex items-center gap-2 text-xs text-white"><input type="checkbox" checked={setting(`payment_${method}_enabled`) === "true"} onChange={(e) => setSetting(`payment_${method}_enabled`, String(e.target.checked))} /> Enable {method === "mtn" ? "MTN Money" : "Airtel Money"}</label>
-              <input value={setting(`payment_${method}_number`)} onChange={(e) => setSetting(`payment_${method}_number`, e.target.value)} placeholder="Receiving phone number" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-              <input value={setting(`payment_${method}_name`)} onChange={(e) => setSetting(`payment_${method}_name`, e.target.value)} placeholder="Account holder name" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-              <textarea value={setting(`payment_${method}_instructions`)} onChange={(e) => setSetting(`payment_${method}_instructions`, e.target.value)} placeholder="Payment instructions" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white min-h-16" />
-            </div>
-          ))}
-          <div className="space-y-2 rounded-lg border border-white/10 p-3">
-            <label className="flex items-center gap-2 text-xs text-white"><input type="checkbox" checked={setting("payment_bank_enabled") === "true"} onChange={(e) => setSetting("payment_bank_enabled", String(e.target.checked))} /> Enable Bank Transfer</label>
-            <input value={setting("payment_bank_name")} onChange={(e) => setSetting("payment_bank_name", e.target.value)} placeholder="Bank name" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-            <input value={setting("payment_bank_account_name")} onChange={(e) => setSetting("payment_bank_account_name", e.target.value)} placeholder="Account holder" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-            <input value={setting("payment_bank_account_number")} onChange={(e) => setSetting("payment_bank_account_number", e.target.value)} placeholder="Account number" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-            <textarea value={setting("payment_bank_instructions")} onChange={(e) => setSetting("payment_bank_instructions", e.target.value)} placeholder="Bank transfer instructions" className="w-full rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white min-h-16" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mt-4 max-w-md">
-          <input value={setting("chat_unlock_amount", "20")} onChange={(e) => setSetting("chat_unlock_amount", e.target.value)} placeholder="Chat price (ZMW)" type="number" min="1" className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-          <input value={setting("payment_currency", "ZMW")} onChange={(e) => setSetting("payment_currency", e.target.value.toUpperCase())} placeholder="Currency" className="rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-xs text-white" />
-        </div>
-      </div>
 
       {/* Pending Manual Payments */}
       <div className="mb-6 rounded-xl border border-white/10 overflow-hidden" style={{ background: "rgba(255,255,255,0.03)" }}>
@@ -164,25 +114,14 @@ export default function FinanceAdmin() {
                     <td className="px-4 py-3">
                       <button
                         onClick={() => {
-                          if (!window.confirm("Approve this payment and unlock the intended chat?")) return;
                           setApprovingId(p.id);
                           approvePayment.mutate({ paymentId: p.id });
                         }}
                         disabled={approvingId === p.id || approvePayment.isPending}
                         className="px-3 py-1.5 rounded-lg text-xs font-medium bg-green-600/20 text-green-400 border border-green-600/30 hover:border-green-600/60 disabled:opacity-40 transition-colors"
                       >
-                        {approvingId === p.id ? "Approving..." : "Approve & Unlock"}
+                        {approvingId === p.id ? "Approving..." : "Approve & Activate"}
                       </button>
-                      <button
-                        onClick={() => {
-                          const reason = window.prompt("Rejection reason (required):");
-                          if (!reason?.trim()) return;
-                          setRejectingId(p.id);
-                          rejectPayment.mutate({ paymentId: p.id, reason: reason.trim() });
-                        }}
-                        disabled={rejectingId === p.id || rejectPayment.isPending}
-                        className="ml-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600/20 text-red-400 border border-red-600/30 disabled:opacity-40"
-                      >Reject</button>
                     </td>
                   </tr>
                 ))}

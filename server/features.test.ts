@@ -8,11 +8,6 @@ vi.mock("./db", () => ({
   createChatUnlock: vi.fn(),
   completeChatUnlock: vi.fn(),
   getPendingUnlockById: vi.fn(),
-  getExistingChatPayment: vi.fn(),
-  getPaymentByTransactionId: vi.fn(),
-  getAppSetting: vi.fn(),
-  getManualPaymentQueue: vi.fn(),
-  reviewChatPayment: vi.fn(),
   getUserById: vi.fn(),
   banUser: vi.fn(),
   getAllUsers: vi.fn(),
@@ -37,7 +32,6 @@ vi.mock("./db", () => ({
   markMessagesAsRead: vi.fn(),
   getUnreadCountForRoom: vi.fn(),
   createNotification: vi.fn(),
-  recordSecurityEvent: vi.fn(),
   recordSwipe: vi.fn(),
 }));
 
@@ -124,9 +118,6 @@ describe("chat.messages - server-side enforcement", () => {
 describe("payment.initiate", () => {
   it("creates a pending payment record", async () => {
     vi.mocked(db.getChatUnlock).mockResolvedValue(undefined);
-    vi.mocked(db.getExistingChatPayment).mockResolvedValue(undefined);
-    vi.mocked(db.getPaymentByTransactionId).mockResolvedValue(undefined);
-    vi.mocked(db.getAppSetting).mockImplementation(async (key: string) => key === "payment_mtn_enabled" ? "true" : null);
     vi.mocked(db.getUserById).mockResolvedValue({
       id: 2, openId: "user-2", name: "Target", email: null, phone: null,
       loginMethod: null, role: "user", age: 22, gender: "female",
@@ -136,7 +127,7 @@ describe("payment.initiate", () => {
     });
     vi.mocked(db.createChatUnlock).mockResolvedValue(42);
     const caller = appRouter.createCaller(makeCtx());
-    const result = await caller.payment.initiate({ targetId: 2, provider: "mtn", transactionId: "TEST-REF-1" });
+    const result = await caller.payment.initiate({ targetId: 2, provider: "mock" });
     expect(result.paymentId).toBe(42);
     expect(result.amount).toBe(20);
   });
@@ -148,20 +139,28 @@ describe("payment.initiate", () => {
       createdAt: new Date(),
     });
     const caller = appRouter.createCaller(makeCtx());
-    await expect(caller.payment.initiate({ targetId: 2, provider: "mtn", transactionId: "TEST-REF-2" })).rejects.toThrow();
+    await expect(caller.payment.initiate({ targetId: 2, provider: "mock" })).rejects.toThrow();
   });
 });
 
 describe("payment.confirm", () => {
-  it("never unlocks from a client confirmation", async () => {
+  it("completes the payment with a reference", async () => {
+    vi.mocked(db.getPendingUnlockById).mockResolvedValue({
+      id: 1, payerId: 1, targetId: 2, status: "pending",
+      amount: 10, provider: "mock", reference: null,
+      createdAt: new Date(),
+    });
+    vi.mocked(db.completeChatUnlock).mockResolvedValue(undefined);
     const caller = appRouter.createCaller(makeCtx());
-    await expect(caller.payment.confirm({ paymentId: 1, mockReference: "TEST-REF" })).rejects.toMatchObject({ code: "BAD_REQUEST" });
-    expect(db.completeChatUnlock).not.toHaveBeenCalled();
+    const result = await caller.payment.confirm({ paymentId: 1, mockReference: "TEST-REF" });
+    expect(result.success).toBe(true);
+    expect(result.reference).toBe("TEST-REF");
   });
 
-  it("requires Finance Admin verification", async () => {
+  it("throws FORBIDDEN when payment does not belong to user", async () => {
+    vi.mocked(db.getPendingUnlockById).mockResolvedValue(undefined);
     const caller = appRouter.createCaller(makeCtx());
-    await expect(caller.payment.confirm({ paymentId: 99 })).rejects.toThrow("Finance Admin verification");
+    await expect(caller.payment.confirm({ paymentId: 99 })).rejects.toThrow();
   });
 });
 

@@ -506,6 +506,7 @@ export default function DiscoverTab() {
           onSuccess={() => {
             setShowPayment(false);
             utils.chat.checkUnlock.invalidate({ targetId: selectedUserId });
+            navigate(`/chat/${selectedUserId}`);
           }}
         />
       )}

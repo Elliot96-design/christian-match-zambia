@@ -120,13 +120,6 @@
       "when": 1792192192852,
       "tag": "0016_tan_polaris",
       "breakpoints": true
-    },
-    {
-      "idx": 17,
-      "version": "5",
-      "when": 1793734674582,
-      "tag": "0017_open_thanos",
-      "breakpoints": true
     }
   ]
 }

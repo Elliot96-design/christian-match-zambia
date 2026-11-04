@@ -36,7 +36,6 @@ import {
   socialAccounts,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
-import { nanoid } from "nanoid";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -324,7 +323,7 @@ export async function hasAnyCompletedUnlock(userId: number): Promise<boolean> {
   const result = await db
     .select({ id: chatUnlocks.id })
     .from(chatUnlocks)
-    .where(and(eq(chatUnlocks.payerId, userId), or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))))
+    .where(and(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.status, "completed")))
     .limit(1);
   return result.length > 0;
 }
@@ -368,13 +367,13 @@ export async function getChatUnlock(
 ): Promise<ChatUnlock | undefined> {
   const db = await getDb();
   if (!db) return undefined;
-  // Check both directions; only verified payments (or legacy completed rows) grant access.
+  // Check both directions
   const result = await db
     .select()
     .from(chatUnlocks)
     .where(
       and(
-        or(eq(chatUnlocks.status, "verified"), or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))),
+        eq(chatUnlocks.status, "completed"),
         or(
           and(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.targetId, targetId)),
           and(eq(chatUnlocks.payerId, targetId), eq(chatUnlocks.targetId, userId))
@@ -390,59 +389,6 @@ export async function createChatUnlock(data: InsertChatUnlock): Promise<number> 
   if (!db) throw new Error("DB not available");
   const result = await db.insert(chatUnlocks).values(data);
   return (result[0] as { insertId: number }).insertId;
-}
-
-export async function getExistingChatPayment(payerId: number, targetId: number) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const rows = await db.select().from(chatUnlocks).where(and(
-    eq(chatUnlocks.payerId, payerId),
-    eq(chatUnlocks.targetId, targetId),
-    ne(chatUnlocks.status, "rejected"),
-    ne(chatUnlocks.status, "expired"),
-  )).orderBy(desc(chatUnlocks.createdAt)).limit(1);
-  return rows[0];
-}
-
-export async function getPaymentByTransactionId(transactionId: string) {
-  const db = await getDb();
-  if (!db) return undefined;
-  const rows = await db.select().from(chatUnlocks).where(eq(chatUnlocks.transactionId, transactionId)).limit(1);
-  return rows[0];
-}
-
-export async function reviewChatPayment(data: {
-  paymentId: number;
-  adminId: number;
-  status: "verified" | "rejected" | "under_review";
-  rejectionReason?: string;
-  reviewNotes?: string;
-}) {
-  const db = await getDb();
-  if (!db) throw new Error("DB not available");
-  await db.update(chatUnlocks).set({
-    status: data.status,
-    verifiedBy: data.adminId,
-    verifiedAt: data.status === "verified" ? new Date() : null,
-    rejectionReason: data.rejectionReason ?? null,
-    reviewNotes: data.reviewNotes ?? null,
-    verificationSource: "finance_admin",
-  }).where(and(
-    eq(chatUnlocks.id, data.paymentId),
-    or(eq(chatUnlocks.status, "pending"), eq(chatUnlocks.status, "under_review")),
-  ));
-}
-
-export async function getManualPaymentQueue() {
-  const db = await getDb();
-  if (!db) return [];
-  const rows = await db.select().from(chatUnlocks)
-    .where(or(eq(chatUnlocks.status, "pending"), eq(chatUnlocks.status, "under_review")))
-    .orderBy(desc(chatUnlocks.createdAt));
-  return Promise.all(rows.map(async (row) => {
-    const [payer, target] = await Promise.all([getUserById(row.payerId), getUserById(row.targetId)]);
-    return { ...row, payerName: payer?.name ?? null, targetName: target?.name ?? null };
-  }));
 }
 
 export async function getPendingUnlockById(id: number, payerId: number): Promise<ChatUnlock | undefined> {
@@ -511,7 +457,7 @@ export async function getMyUnlockedChats(
     .where(
       and(
         eq(chatUnlocks.payerId, userId),
-        or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))
+        eq(chatUnlocks.status, "completed")
       )
     )
     .orderBy(desc(chatUnlocks.createdAt));
@@ -523,10 +469,7 @@ export async function getMyUnlockedChats(
 export async function createPremiumPayment(data: {
   payerId: number;
   amount: number;
-  provider: "mtn" | "airtel" | "bank";
-  transactionId: string;
-  senderPhone?: string;
-  senderName?: string;
+  provider: string;
 }): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("DB not available");
@@ -535,13 +478,8 @@ export async function createPremiumPayment(data: {
     payerId: data.payerId,
     targetId: 0, // sentinel: 0 = premium subscription
     amount: data.amount,
-    provider: data.provider,
+    provider: data.provider as "mtn" | "airtel" | "mock",
     status: "pending",
-    currency: "ZMW",
-    transactionId: data.transactionId,
-    senderPhone: data.senderPhone ?? null,
-    senderName: data.senderName ?? null,
-    internalReference: `FH-PREM-${nanoid(8).toUpperCase()}`,
   });
   return (result[0] as { insertId: number }).insertId;
 }
@@ -874,7 +812,7 @@ export async function getNotificationsForUser(userId: number): Promise<Notificat
     const likes = await db
       .select({ id: chatUnlocks.id, payerId: chatUnlocks.payerId, createdAt: chatUnlocks.createdAt })
       .from(chatUnlocks)
-      .where(and(eq(chatUnlocks.targetId, userId), or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))))
+      .where(and(eq(chatUnlocks.targetId, userId), eq(chatUnlocks.status, "completed")))
       .orderBy(desc(chatUnlocks.createdAt))
       .limit(10);
 
@@ -960,7 +898,7 @@ export async function getAdminStats(): Promise<{
   today.setHours(0, 0, 0, 0);
   const [allUsers, allPayments, allTickets] = await Promise.all([
     db.select().from(users),
-    db.select().from(chatUnlocks).where(or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))),
+    db.select().from(chatUnlocks).where(eq(chatUnlocks.status, "completed")),
     db.select().from(supportTickets),
   ]);
   const premiumUsers = allUsers.filter(u => u.isPremium).length;
@@ -1246,7 +1184,7 @@ export async function getUnreadMessageCount(userId: number): Promise<number> {
     .from(chatUnlocks)
     .where(
       and(
-        or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed")),
+        eq(chatUnlocks.status, "completed"),
         or(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.targetId, userId))
       )
     );
@@ -1282,7 +1220,7 @@ export async function getRealNotificationCount(userId: number): Promise<number> 
     db
       .select({ count: sql<number>`COUNT(*)` })
       .from(chatUnlocks)
-      .where(and(eq(chatUnlocks.targetId, userId), or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed")))),
+      .where(and(eq(chatUnlocks.targetId, userId), eq(chatUnlocks.status, "completed"))),
     db
       .select({ count: sql<number>`COUNT(*)` })
       .from(announcements),
@@ -1316,7 +1254,7 @@ export async function getAllConversationPartners(userId: number) {
   const unlockedIds = await db
     .select({ targetId: chatUnlocks.targetId })
     .from(chatUnlocks)
-    .where(and(eq(chatUnlocks.payerId, userId), or(eq(chatUnlocks.status, "verified"), eq(chatUnlocks.status, "completed"))));
+    .where(and(eq(chatUnlocks.payerId, userId), eq(chatUnlocks.status, "completed")));
 
   const unlockedSet = new Set(unlockedIds.map(u => u.targetId));
 

@@ -294,6 +294,7 @@ export function MessagesTab({ navigate }: { navigate: (path: string) => void }) 
           onSuccess={() => {
             setShowPayment(false);
             setSelectedUserId(null);
+            navigate(`/chat/${selectedUserId}`);
           }}
         />
       )}

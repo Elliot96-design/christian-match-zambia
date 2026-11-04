@@ -191,6 +191,7 @@ export default function ProfileView() {
           onSuccess={() => {
             setShowPayment(false);
             refetchUnlock();
+            navigate(`/chat/${profile.id}`);
           }}
         />
       )}
