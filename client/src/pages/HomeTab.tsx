@@ -11,7 +11,7 @@ import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import { LOGO_URL } from "@/components/AppHeader";
 
-const BIBLE_VERSE_BG = "/faithful-hearts-bible-bg.svg";
+const BIBLE_VERSE_BG = "/daily-bible-verse-bg-optimized.jpg";
 
 const DAILY_VERSES = [
   {
@@ -77,8 +77,8 @@ function SuggestedProfileCard({
       className="flex-shrink-0 rounded-2xl overflow-hidden"
       style={{
         width: 160,
-        background: "oklch(0.97 0.01 290)",
-        border: "1px solid oklch(0.90 0.04 290)",
+        background: "oklch(0.22 0.18 290)",
+        border: "1px solid oklch(0.40 0.12 290 / 0.55)",
         boxShadow: "0 4px 16px oklch(0 0 0 / 0.10)",
       }}
     >
@@ -94,9 +94,9 @@ function SuggestedProfileCard({
         ) : (
           <div
             className="w-full h-full flex items-center justify-center"
-            style={{ background: "oklch(0.90 0.06 290)" }}
+            style={{ background: "oklch(0.30 0.18 290)", }}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12" style={{ color: "oklch(0.55 0.12 290)" }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-12 h-12" style={{ color: "oklch(0.78 0.08 290)", }}>
               <circle cx="12" cy="8" r="4" />
               <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
             </svg>
@@ -172,7 +172,7 @@ function SuggestedProfileCard({
             >
               K20
             </span>
-            <span className="text-[9px] text-left" style={{ color: "oklch(0.50 0.08 290)" }}>
+            <span className="text-[9px] text-left" style={{ color: "oklch(0.78 0.08 290)", }}>
               Once off payment<br />to unlock chat
             </span>
           </button>
@@ -212,7 +212,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
   return (
     <div
       className="rounded-2xl overflow-hidden"
-      style={{ background: "oklch(0.98 0.005 290)", border: "1px solid oklch(0.90 0.04 290)", boxShadow: "0 4px 16px oklch(0 0 0 / 0.08)" }}
+      style={{ background: "oklch(0.26 0.18 290)", border: "1px solid oklch(0.40 0.12 290 / 0.55)", boxShadow: "0 4px 16px oklch(0 0 0 / 0.08)" }}
     >
       <div className="flex gap-0">
         {/* Couple photo */}
@@ -222,7 +222,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
           ) : (
             <div
               className="w-full h-full flex items-center justify-center"
-              style={{ background: "oklch(0.90 0.06 290)", minHeight: 200 }}
+              style={{ background: "oklch(0.30 0.18 290)", minHeight: 200 }}
             >
               {/* Faithful Hearts logo watermark */}
               <div className="flex flex-col items-center gap-1 opacity-30">
@@ -244,7 +244,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
               <div className="flex items-center gap-1.5">
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: "oklch(0.94 0.06 80)" }}
+                  style={{ background: "oklch(0.34 0.16 290)", }}
                 >
                   <svg viewBox="0 0 24 24" fill="none" className="w-3.5 h-3.5">
                     <path d="M12 21C12 21 3 14 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 6-9 13-9 13z" fill="oklch(0.72 0.16 80)" />
@@ -257,7 +257,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
               {stories.length > 1 && (
                 <span
                   className="text-[9px] font-bold px-2 py-0.5 rounded-full"
-                  style={{ background: "oklch(0.90 0.04 290)", color: "oklch(0.45 0.12 290)" }}
+                  style={{ background: "oklch(0.34 0.14 290)", color: "oklch(0.82 0.08 290)", }}
                 >
                   {idx + 1}/{stories.length}
                 </span>
@@ -265,26 +265,26 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
             </div>
 
             {/* Quote title */}
-            <p className="font-bold text-sm leading-tight mb-1" style={{ color: "oklch(0.22 0.18 290)" }}>
+            <p className="font-bold text-sm leading-tight mb-1" style={{ color: "white" }}>
               {story.quoteTitle} 💜
             </p>
 
             {/* Location */}
             <div className="flex items-center gap-1 mb-2">
-              <MapPin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: "oklch(0.55 0.12 290)" }} />
-              <span className="text-[10px]" style={{ color: "oklch(0.55 0.12 290)" }}>
+              <MapPin className="w-2.5 h-2.5 flex-shrink-0" style={{ color: "oklch(0.78 0.08 290)", }} />
+              <span className="text-[10px]" style={{ color: "oklch(0.78 0.08 290)", }}>
                 {story.coupleName} | {story.location}
               </span>
             </div>
 
             {/* Story text */}
-            <p className="text-[10px] leading-relaxed italic" style={{ color: "oklch(0.40 0.10 290)" }}>
+            <p className="text-[10px] leading-relaxed italic" style={{ color: "oklch(0.86 0.06 290)", }}>
               {story.story.length > 160 ? story.story.slice(0, 157) + "..." : story.story}
             </p>
           </div>
 
           {/* Tagline */}
-          <p className="text-[9px] mt-2" style={{ color: "oklch(0.55 0.12 290)" }}>
+          <p className="text-[9px] mt-2" style={{ color: "oklch(0.78 0.08 290)", }}>
             God writes the best love stories. ✨
           </p>
         </div>
@@ -424,7 +424,7 @@ export default function HomeTab({
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "oklch(0.97 0.008 290)" }}>
+    <div className="flex-1 flex flex-col overflow-hidden" style={{ background: "linear-gradient(180deg, oklch(0.25 0.20 290) 0%, oklch(0.18 0.16 290) 100%)" }}>
       {/* Duplicate inner header removed — Browse.tsx purple header is the single top header */}
 
       {/* ── Scrollable Content ──────────────────────────────────── */}
@@ -433,12 +433,12 @@ export default function HomeTab({
         <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
           {/* Greeting */}
           <div className="flex-1 min-w-0">
-            <p className="font-display font-bold text-xl leading-tight" style={{ color: "oklch(0.18 0.12 290)" }}>
+            <p className="font-display font-bold text-xl leading-tight" style={{ color: "white" }}>
               {greeting},{" "}
               <span style={{ color: "oklch(0.72 0.16 80)" }}>{firstName}!</span>
               {" "}✨
             </p>
-            <p className="text-sm mt-0.5" style={{ color: "oklch(0.50 0.08 290)" }}>
+            <p className="text-sm mt-0.5" style={{ color: "oklch(0.78 0.08 290)", }}>
               Let your faith guide your heart.
             </p>
           </div>
@@ -564,11 +564,11 @@ export default function HomeTab({
         {/* ── Suggested For You ───────────────────────────────────── */}
         <div className="mb-4">
           <div className="flex items-center justify-between px-4 mb-2.5">
-            <span className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Suggested for you</span>
+            <span className="font-bold text-sm" style={{ color: "white" }}>Suggested for you</span>
             <button
               onClick={() => onTabChange("swipe")}
               className="text-xs font-semibold"
-              style={{ color: "oklch(0.45 0.18 290)" }}
+              style={{ color: "oklch(0.72 0.16 80)", }}
             >
               View all
             </button>
@@ -580,7 +580,7 @@ export default function HomeTab({
                 <div
                   key={i}
                   className="flex-shrink-0 rounded-2xl animate-pulse"
-                  style={{ width: 160, height: 280, background: "oklch(0.90 0.04 290)" }}
+                  style={{ width: 160, height: 280, background: "oklch(0.34 0.14 290)", }}
                 />
               ))}
             </div>
@@ -601,9 +601,9 @@ export default function HomeTab({
             <div className="px-4">
               <div
                 className="rounded-2xl p-6 text-center"
-                style={{ background: "oklch(0.94 0.04 290)" }}
+                style={{ background: "oklch(0.30 0.16 290)" }}
               >
-                <p className="text-sm font-semibold" style={{ color: "oklch(0.45 0.12 290)" }}>No profiles yet</p>
+                <p className="text-sm font-semibold" style={{ color: "oklch(0.82 0.08 290)", }}>No profiles yet</p>
                 <p className="text-xs mt-1" style={{ color: "oklch(0.60 0.08 290)" }}>Be the first to join!</p>
               </div>
             </div>
@@ -625,7 +625,7 @@ export default function HomeTab({
               {/* Megaphone icon */}
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ background: "oklch(0.45 0.18 290)" }}
+                style={{ background: "oklch(0.38 0.20 290)", }}
               >
                 <Megaphone className="w-5 h-5 text-white" />
               </div>
@@ -635,7 +635,7 @@ export default function HomeTab({
                   <span className="font-bold text-white text-xs tracking-wide">UPDATES</span>
                   <span
                     className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                    style={{ background: "oklch(0.45 0.18 290)", color: "white" }}
+                    style={{ background: "oklch(0.38 0.20 290)", color: "white" }}
                   >
                     NEW
                   </span>
@@ -669,12 +669,12 @@ export default function HomeTab({
           <div className="px-4 mb-4">
             <div
               className="rounded-2xl p-4 flex items-center gap-3"
-              style={{ background: "oklch(0.98 0.005 290)", border: `1px solid ${completionScore >= 100 ? "oklch(0.65 0.20 145 / 0.4)" : "oklch(0.90 0.04 290)"}`, boxShadow: "0 4px 16px oklch(0 0 0 / 0.06)" }}
+              style={{ background: "oklch(0.28 0.18 290)", border: `1px solid ${completionScore >= 100 ? "oklch(0.65 0.20 145 / 0.4)" : "oklch(0.40 0.12 290 / 0.55)"}`, boxShadow: "0 8px 24px oklch(0 0 0 / 0.18)" }}
             >
               {/* Circular progress */}
               <div className="flex-shrink-0 relative w-14 h-14">
                 <svg viewBox="0 0 56 56" className="w-14 h-14 -rotate-90">
-                  <circle cx="28" cy="28" r="22" fill="none" stroke="oklch(0.90 0.04 290)" strokeWidth="5" />
+                  <circle cx="28" cy="28" r="22" fill="none" stroke="oklch(0.38 0.12 290)" strokeWidth="5" />
                   <circle
                     cx="28" cy="28" r="22" fill="none"
                     stroke={completionScore >= 100 ? "oklch(0.65 0.20 145)" : "oklch(0.72 0.16 80)"}
@@ -700,15 +700,15 @@ export default function HomeTab({
               <div className="flex-1 min-w-0">
                 {completionScore >= 100 ? (
                   <>
-                    <p className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Profile Complete!</p>
-                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.08 290)" }}>
+                    <p className="font-bold text-sm" style={{ color: "white" }}>Profile Complete!</p>
+                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.78 0.08 290)" }}>
                       Your profile is fully set up. You're getting the best matches.
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="font-bold text-sm" style={{ color: "oklch(0.22 0.18 290)" }}>Complete your profile</p>
-                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.08 290)" }}>
+                    <p className="font-bold text-sm" style={{ color: "white" }}>Complete your profile</p>
+                    <p className="text-xs mt-0.5" style={{ color: "oklch(0.78 0.08 290)" }}>
                       A complete profile gets you more matches and better connections
                     </p>
                   </>
