@@ -13,6 +13,12 @@ import { LOGO_URL } from "@/components/AppHeader";
 
 const BIBLE_VERSE_BG = "/daily-bible-verse-bg-optimized.jpg";
 
+const GENERATED_STORY_IMAGES = [
+  "/love-stories/tendai-wezi.jpg",
+  "/love-stories/chanda-mwila.jpg",
+  "/love-stories/emmanuel-grace.jpg",
+];
+
 const DAILY_VERSES = [
   {
     text: "Trust in the Lord with all your heart and lean not on your own understanding; in all your ways submit to Him, and He will make your paths straight.",
@@ -208,6 +214,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
   if (stories.length === 0) return null;
 
   const story = stories[idx]!;
+  const storyImage = story.photoUrl || GENERATED_STORY_IMAGES[idx % GENERATED_STORY_IMAGES.length];
 
   return (
     <div
@@ -216,24 +223,18 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
     >
       <div className="flex gap-0">
         {/* Couple photo */}
-        <div className="flex-shrink-0 relative" style={{ width: 130, minHeight: 200 }}>
-          {story.photoUrl ? (
-            <img src={story.photoUrl} alt={story.coupleName} className="w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <div
-              className="w-full h-full flex items-center justify-center"
-              style={{ background: "oklch(0.30 0.18 290)", minHeight: 200 }}
-            >
-              {/* Faithful Hearts logo watermark */}
-              <div className="flex flex-col items-center gap-1 opacity-30">
-                <svg viewBox="0 0 40 40" fill="none" className="w-10 h-10">
-                  <path d="M20 35C20 35 5 26 5 15a8 8 0 0 1 15-4 8 8 0 0 1 15 4c0 11-15 20-15 20z" fill="oklch(0.72 0.16 80)" />
-                  <line x1="20" y1="14" x2="20" y2="28" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                  <line x1="14" y1="19" x2="26" y2="19" stroke="white" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </div>
-            </div>
-          )}
+        <div className="flex-shrink-0 relative overflow-hidden" style={{ width: 130, minHeight: 200 }}>
+          <img
+            key={storyImage}
+            src={storyImage}
+            alt={`${story.coupleName} love story`}
+            className="w-full h-full object-cover transition-opacity duration-300"
+            loading="lazy"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/10" aria-hidden="true" />
+          <div className="absolute left-2 bottom-2 w-8 h-8 rounded-full bg-purple-950/75 border border-amber-300/60 p-1.5 shadow-lg">
+            <img src={LOGO_URL} alt="Faithful Hearts heart and cross" className="w-full h-full object-cover rounded-full" />
+          </div>
         </div>
 
         {/* Story content */}
@@ -252,7 +253,7 @@ function LoveStoriesSlider({ stories }: { stories: { id: number; coupleName: str
                     <line x1="9" y1="10.5" x2="15" y2="10.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </div>
-                <span className="font-bold text-xs" style={{ color: "oklch(0.28 0.20 290)" }}>Love Stories</span>
+                <span className="font-bold text-xs" style={{ color: "#f59e0b" }}>Love Stories</span>
               </div>
               {stories.length > 1 && (
                 <span
