@@ -43,7 +43,7 @@ const HOW_IT_WORKS = [
   },
 ];
 
-const WELCOME_COUPLE_IMAGE = "/welcome-black-man-white-woman-couple.jpg";
+const WELCOME_COUPLE_IMAGE = "/welcome-black-man-white-woman-couple-wide.jpg";
 
 export default function Home() {
   const { isAuthenticated, loading, user } = useAuth();
@@ -139,37 +139,40 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ── Welcome couple image ──────────────────────────────── */}
-      <div className="mx-5 mt-3 h-44 rounded-2xl overflow-hidden flex-shrink-0" style={{ border: "1px solid oklch(0.40 0.12 290 / 0.35)", boxShadow: "0 8px 24px oklch(0 0 0 / 0.16)" }}>
-        <img
-          src={WELCOME_COUPLE_IMAGE}
-          alt="A couple sharing a joyful moment together"
-          className="w-full h-full object-cover object-center"
-          loading="eager"
-        />
-      </div>
+      {/* ── Welcome couple image + How It Works overlay ───────── */}
+      <div className="relative mx-5 mt-3 h-[390px] flex-shrink-0">
+        <div className="absolute inset-x-0 top-0 h-[285px] overflow-hidden rounded-2xl" style={{ boxShadow: "0 8px 24px oklch(0 0 0 / 0.16)" }}>
+          <img
+            src={WELCOME_COUPLE_IMAGE}
+            alt="A Black man and white woman sharing a joyful moment together"
+            className="w-full h-full object-cover object-center"
+            loading="eager"
+          />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, oklch(0.22 0.18 290 / 0.55) 0%, transparent 18%, transparent 82%, oklch(0.22 0.18 290 / 0.55) 100%), linear-gradient(180deg, transparent 45%, oklch(0.22 0.18 290 / 0.96) 100%)" }} aria-hidden="true" />
+        </div>
 
-      {/* ── How It Works ─────────────────────────────────────── */}
-      <div
-        className="mx-5 mt-3 rounded-2xl p-4 flex-shrink-0"
-        style={{ background: "oklch(0.26 0.18 290 / 0.90)", border: "1px solid oklch(0.40 0.12 290 / 0.35)" }}
-      >
-        <h2 className="text-gold font-display font-bold text-sm mb-3">How It Works</h2>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {HOW_IT_WORKS.map((step) => (
-            <div key={step.title} className="flex items-start gap-2">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white"
-                style={{ background: "oklch(0.35 0.18 290)" }}
-              >
-                {step.icon}
+        {/* ── How It Works ─────────────────────────────────────── */}
+        <div
+          className="absolute left-0 right-0 bottom-0 rounded-2xl p-4"
+          style={{ background: "oklch(0.26 0.18 290 / 0.95)", border: "1px solid oklch(0.40 0.12 290 / 0.35)", boxShadow: "0 10px 28px oklch(0 0 0 / 0.22)" }}
+        >
+          <h2 className="text-gold font-display font-bold text-sm mb-3">How It Works</h2>
+          <div className="grid grid-cols-1 gap-y-3">
+            {HOW_IT_WORKS.map((step) => (
+              <div key={step.title} className="flex items-start gap-2">
+                <div
+                  className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white"
+                  style={{ background: "oklch(0.35 0.18 290)" }}
+                >
+                  {step.icon}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-white font-semibold text-xs leading-tight">{step.title}</p>
+                  <p className="text-white/55 text-[10px] mt-0.5 leading-relaxed">{step.desc}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-white font-semibold text-xs leading-tight">{step.title}</p>
-                <p className="text-white/55 text-[10px] mt-0.5 leading-relaxed">{step.desc}</p>
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
