@@ -43,6 +43,8 @@ const HOW_IT_WORKS = [
   },
 ];
 
+const WELCOME_COUPLE_IMAGE = "/welcome-black-man-white-woman-couple.jpg";
+
 export default function Home() {
   const { isAuthenticated, loading, user } = useAuth();
   const [, navigate] = useLocation();
@@ -76,7 +78,7 @@ export default function Home() {
 
   return (
     <div
-      className="h-screen hero-gradient flex flex-col max-w-[480px] mx-auto overflow-hidden"
+      className="min-h-screen hero-gradient flex flex-col max-w-[480px] mx-auto overflow-y-auto"
       style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* ── Top bar ─────────────────────────────────────────── */}
@@ -135,6 +137,16 @@ export default function Home() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Welcome couple image ──────────────────────────────── */}
+      <div className="mx-5 mt-3 h-44 rounded-2xl overflow-hidden flex-shrink-0" style={{ border: "1px solid oklch(0.40 0.12 290 / 0.35)", boxShadow: "0 8px 24px oklch(0 0 0 / 0.16)" }}>
+        <img
+          src={WELCOME_COUPLE_IMAGE}
+          alt="A couple sharing a joyful moment together"
+          className="w-full h-full object-cover object-center"
+          loading="eager"
+        />
       </div>
 
       {/* ── How It Works ─────────────────────────────────────── */}
