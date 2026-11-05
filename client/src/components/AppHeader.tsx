@@ -3,7 +3,7 @@ import { ArrowLeft, LogOut } from "lucide-react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
-export const LOGO_URL = "/faithful-hearts-logo.svg";
+export const LOGO_URL = "/faithful-hearts-main-logo.jpg";
 
 interface AppHeaderProps {
   /** Show a back arrow that navigates to this path */
