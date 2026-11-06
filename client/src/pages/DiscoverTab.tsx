@@ -16,6 +16,20 @@ const FILTER_CHIPS: { id: FilterChip; label: string; icon?: React.ReactNode }[] 
   { id: "nearby", label: "Nearby" },
 ];
 
+// Stable country reference data; profile results still come only from the live backend.
+const WORLD_COUNTRIES = [
+  "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan",
+  "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi",
+  "Cabo Verde", "Cambodia", "Cameroon", "Canada", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czechia",
+  "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia",
+  "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana",
+  "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan",
+  "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar",
+  "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal",
+  "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "Sao Tome and Principe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria",
+  "Taiwan", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Türkiye", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe",
+];
+
 const PREMIUM_FEATURES = [
   { icon: <Heart className="w-3.5 h-3.5" />, label: "Unlimited likes" },
   { icon: <span className="text-[11px] font-bold">👁</span>, label: "See who likes you" },
@@ -39,6 +53,7 @@ export default function DiscoverTab() {
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
   const [filterLocation, setFilterLocation] = useState<string | undefined>();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showCountryMenu, setShowCountryMenu] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -50,7 +65,6 @@ export default function DiscoverTab() {
     { filter, gender: filterGender, location: filterLocation, offset: 0 },
     { refetchInterval: filter === "online" ? 30000 : false }
   );
-  const { data: locations } = trpc.browse.locations.useQuery();
   const recordLike = trpc.browse.recordLike.useMutation();
   const recordAction = trpc.browse.recordAction.useMutation();
 
@@ -226,19 +240,19 @@ export default function DiscoverTab() {
               aria-haspopup="menu"
               aria-expanded={showFilterMenu}
             >
-              <span>{filterGender === "male" ? "Men" : filterGender === "female" ? "Women" : filterLocation ?? "All"}</span>
+              <span>Filtering</span>
               <ChevronDown className="w-3 h-3" />
             </button>
             {showFilterMenu && (
               <div className="absolute left-0 top-full mt-2 z-30 w-56 rounded-2xl p-2 shadow-2xl" style={{ background: "#21113f", border: "1px solid rgba(255,255,255,0.14)" }} role="menu">
                 {[
                   { label: "All", gender: undefined, location: undefined },
-                  { label: "Men", gender: "male" as const, location: undefined },
-                  { label: "Women", gender: "female" as const, location: undefined },
+                  { label: "Male", gender: "male" as const, location: undefined },
+                  { label: "Female", gender: "female" as const, location: undefined },
                 ].map((option) => (
                   <button
                     key={option.label}
-                    onClick={() => { setFilterGender(option.gender); setFilterLocation(option.location); setFilter("all"); setShowFilterMenu(false); }}
+                    onClick={() => { setFilterGender(option.gender); setFilterLocation(option.location); setFilter("all"); setShowCountryMenu(false); setShowFilterMenu(false); }}
                     className="w-full text-left px-3 py-2 rounded-xl text-xs text-white/85 hover:bg-white/10"
                     role="menuitem"
                   >
@@ -247,23 +261,35 @@ export default function DiscoverTab() {
                 ))}
                 <div className="my-1 border-t border-white/10" />
                 <button
-                  onClick={() => { setFilterGender(undefined); setFilterLocation(undefined); setFilter("all"); setShowFilterMenu(false); }}
+                  onClick={() => { setFilterGender(undefined); setFilterLocation(undefined); setFilter("all"); setShowCountryMenu(false); setShowFilterMenu(false); }}
                   className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-white/10"
                   role="menuitem"
                 >
-                  Search all countries worldwide
+                  Search All
                 </button>
-                <label className="block px-3 pt-2 pb-1 text-[10px] text-white/50">Country / location</label>
-                <select
-                  value={filterLocation ?? ""}
-                  onChange={(event) => { setFilterGender(undefined); setFilterLocation(event.target.value || undefined); setFilter("all"); setShowFilterMenu(false); }}
-                  className="w-full rounded-xl px-3 py-2 text-xs text-white outline-none"
-                  style={{ background: "#32185d", border: "1px solid rgba(255,255,255,0.14)" }}
-                  aria-label="Choose a country or location"
+                <button
+                  onClick={() => setShowCountryMenu((open) => !open)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs text-white/85 hover:bg-white/10"
+                  role="menuitem"
+                  aria-expanded={showCountryMenu}
                 >
-                  <option value="">Choose a country or location</option>
-                  {(locations ?? []).map((location) => <option key={location} value={location}>{location}</option>)}
-                </select>
+                  <span>{filterLocation ?? "Country"}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showCountryMenu ? "rotate-180" : ""}`} />
+                </button>
+                {showCountryMenu && (
+                  <div className="mt-1 max-h-56 overflow-y-auto rounded-xl p-1" style={{ background: "#32185d", border: "1px solid rgba(255,255,255,0.14)" }} role="menu" aria-label="Countries worldwide">
+                    {WORLD_COUNTRIES.map((country) => (
+                      <button
+                        key={country}
+                        onClick={() => { setFilterGender(undefined); setFilterLocation(country); setFilter("all"); setShowCountryMenu(false); setShowFilterMenu(false); }}
+                        className="w-full text-left px-3 py-2 rounded-lg text-xs text-white/85 hover:bg-white/10"
+                        role="menuitem"
+                      >
+                        {country}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
