@@ -282,7 +282,7 @@ describe("notification.markAsRead", () => {
     const caller = appRouter.createCaller(makeCtx());
     const result = await caller.notification.markAsRead({ notificationId: 1 });
     expect(result.success).toBe(true);
-    expect(db.markNotificationAsRead).toHaveBeenCalledWith(1);
+    expect(db.markNotificationAsRead).toHaveBeenCalledWith(1, 1);
   });
 });
 

@@ -333,6 +333,9 @@ export default function HomeTab({
   const { data: premiumStatus } = trpc.profile.premiumStatus.useQuery();
   const { data: completionData } = trpc.profile.completionScore.useQuery();
   const { data: notifCountData } = trpc.home.notificationCount.useQuery();
+  const recordLike = trpc.browse.recordLike.useMutation({
+    onError: (error) => toast.error(error.message),
+  });
 
   const isPremium = premiumStatus?.isPremium ?? user?.isPremium ?? false;
   // Default to 0 so card is always visible until real data loads
@@ -356,6 +359,7 @@ export default function HomeTab({
   };
 
   const handleLike = (userId: number) => {
+    recordLike.mutate({ targetId: userId });
     toast.success("Liked! ❤️");
   };
 

@@ -7,16 +7,18 @@ import type { Notification } from "@shared/types";
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const utils = trpc.useUtils();
 
-  // Fetch unread notifications
+  // Keep unread notifications live even while the dropdown is closed.
   const { data: notificationsData, refetch } = trpc.notification.list.useQuery(
     undefined,
-    { enabled: isOpen }
+    { refetchInterval: 30000 }
   );
 
   const markAsRead = trpc.notification.markAsRead.useMutation({
     onSuccess: () => {
       refetch();
+      utils.home.notificationCount.invalidate();
     },
     onError: (e) => toast.error(e.message),
   });

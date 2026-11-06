@@ -498,6 +498,8 @@ export const appRouter = router({
       .input(
         z.object({
           filter: z.enum(["all", "online", "new", "nearby"]).default("all"),
+          gender: z.enum(["male", "female"]).optional(),
+          location: z.string().trim().min(1).optional(),
           offset: z.number().int().min(0).default(0),
         })
       )
@@ -511,6 +513,8 @@ export const appRouter = router({
           ctx.user.id,
           input.filter,
           user?.location ?? null,
+          input.gender,
+          input.location,
           20,
           input.offset
         );
@@ -532,6 +536,22 @@ export const appRouter = router({
           content: `${ctx.user.name} liked your profile!`,
           relatedUserId: ctx.user.id,
         });
+        return { success: true };
+      }),
+
+    recordAction: protectedProcedure
+      .input(z.object({ targetId: z.number().int(), action: z.enum(["like", "dislike", "skip"]) }))
+      .mutation(async ({ ctx, input }) => {
+        await recordSwipe(ctx.user.id, input.targetId, input.action);
+        if (input.action === "like") {
+          await createNotification({
+            userId: input.targetId,
+            type: "like",
+            title: "New Like",
+            content: `${ctx.user.name ?? "A member"} liked your profile!`,
+            relatedUserId: ctx.user.id,
+          });
+        }
         return { success: true };
       }),
   }),
@@ -795,14 +815,14 @@ export const appRouter = router({
     }),
 
     notifications: protectedProcedure.query(async ({ ctx }) => {
-      return getNotificationsForUser(ctx.user.id);
+      return getUnreadNotifications(ctx.user.id);
     }),
     unreadMessageCount: protectedProcedure.query(async ({ ctx }) => {
       const count = await getUnreadMessageCount(ctx.user.id);
       return { count };
     }),
     notificationCount: protectedProcedure.query(async ({ ctx }) => {
-      const count = await getRealNotificationCount(ctx.user.id);
+      const count = await getUnreadNotificationCount(ctx.user.id);
       return { count };
     }),
     allConversations: protectedProcedure.query(async ({ ctx }) => {
@@ -1039,8 +1059,8 @@ export const appRouter = router({
     }),
     markAsRead: protectedProcedure
       .input(z.object({ notificationId: z.number().int() }))
-      .mutation(async ({ input }) => {
-        await markNotificationAsRead(input.notificationId);
+      .mutation(async ({ ctx, input }) => {
+        await markNotificationAsRead(input.notificationId, ctx.user.id);
         return { success: true };
       }),
     count: protectedProcedure.query(async ({ ctx }) => {

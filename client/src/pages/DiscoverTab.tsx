@@ -1,21 +1,16 @@
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
-import { Crown, MapPin, Briefcase, Heart, ChevronRight, X, RefreshCw, Lock, Check } from "lucide-react";
+import { Crown, MapPin, Briefcase, Heart, ChevronRight, ChevronDown, X, RefreshCw, Lock, Check } from "lucide-react";
 import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 
-type FilterChip = "all" | "online" | "new" | "nearby";
+type DiscoverFilter = "all" | "online" | "new" | "nearby";
+type FilterChip = Exclude<DiscoverFilter, "all">;
 
 const FILTER_CHIPS: { id: FilterChip; label: string; icon?: React.ReactNode }[] = [
-  { id: "all", label: "All", icon: <span className="inline-block w-4 h-4 mr-1 align-middle">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  </span> },
   { id: "online", label: "Online Now" },
   { id: "new", label: "New Members" },
   { id: "nearby", label: "Nearby" },
@@ -40,17 +35,24 @@ export default function DiscoverTab() {
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
 
-  const [filter, setFilter] = useState<FilterChip>("all");
+  const [filter, setFilter] = useState<DiscoverFilter>("all");
+  const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
+  const [filterLocation, setFilterLocation] = useState<string | undefined>();
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [cardIndex, setCardIndex] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [savedProfiles, setSavedProfiles] = useState<Set<number>>(new Set());
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const { data: profiles, isLoading, refetch } = trpc.browse.swipeList.useQuery(
-    { filter, offset: 0 },
-    { refetchInterval: false }
+    { filter, gender: filterGender, location: filterLocation, offset: 0 },
+    { refetchInterval: filter === "online" ? 30000 : false }
   );
+  const { data: locations } = trpc.browse.locations.useQuery();
+  const recordLike = trpc.browse.recordLike.useMutation();
+  const recordAction = trpc.browse.recordAction.useMutation();
 
   const currentProfile = profiles && profiles.length > 0
     ? profiles[cardIndex % profiles.length]
@@ -60,9 +62,10 @@ export default function DiscoverTab() {
   const photoIndex = 1;
 
   const handleDislike = useCallback(() => {
+    if (currentProfile) recordAction.mutate({ targetId: currentProfile.id, action: "dislike" });
     setCardIndex((i) => i + 1);
     toast("Skipped", { icon: "✕" });
-  }, []);
+  }, [currentProfile, recordAction]);
 
   const handleRefresh = useCallback(() => {
     setCardIndex(0);
@@ -72,10 +75,30 @@ export default function DiscoverTab() {
 
   const handleLike = useCallback(() => {
     if (!currentProfile) return;
+    recordLike.mutate({ targetId: currentProfile.id });
     setSavedProfiles((prev) => new Set(prev).add(currentProfile.id));
     setCardIndex((i) => i + 1);
     toast.success("Liked! ❤️");
-  }, [currentProfile]);
+  }, [currentProfile, recordLike]);
+
+  const handleSwipeStart = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    swipeStartRef.current = { x: event.clientX, y: event.clientY };
+  }, []);
+
+  const handleSwipeEnd = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) < 70 || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    if (deltaX > 0) handleLike();
+    else handleDislike();
+  }, [handleDislike, handleLike]);
+
+  useEffect(() => {
+    setCardIndex(0);
+  }, [filter, filterGender, filterLocation]);
 
   const handleSaveHeart = useCallback(() => {
     if (!currentProfile) return;
@@ -191,6 +214,59 @@ export default function DiscoverTab() {
       {/* ── Filter chips ───────────────────────────────────────────────────── */}
       <div className="px-4 mb-3 flex-shrink-0">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="relative flex-shrink-0">
+            <button
+              onClick={() => setShowFilterMenu((open) => !open)}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all"
+              style={{
+                background: filterGender || filterLocation ? chipActiveBg : "rgba(255,255,255,0.06)",
+                border: `1.5px solid ${filterGender || filterLocation ? chipBorderActive : "rgba(255,255,255,0.12)"}`,
+                color: "white",
+              }}
+              aria-haspopup="menu"
+              aria-expanded={showFilterMenu}
+            >
+              <span>{filterGender === "male" ? "Men" : filterGender === "female" ? "Women" : filterLocation ?? "All"}</span>
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {showFilterMenu && (
+              <div className="absolute left-0 top-full mt-2 z-30 w-56 rounded-2xl p-2 shadow-2xl" style={{ background: "#21113f", border: "1px solid rgba(255,255,255,0.14)" }} role="menu">
+                {[
+                  { label: "All", gender: undefined, location: undefined },
+                  { label: "Men", gender: "male" as const, location: undefined },
+                  { label: "Women", gender: "female" as const, location: undefined },
+                ].map((option) => (
+                  <button
+                    key={option.label}
+                    onClick={() => { setFilterGender(option.gender); setFilterLocation(option.location); setFilter("all"); setShowFilterMenu(false); }}
+                    className="w-full text-left px-3 py-2 rounded-xl text-xs text-white/85 hover:bg-white/10"
+                    role="menuitem"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+                <div className="my-1 border-t border-white/10" />
+                <button
+                  onClick={() => { setFilterGender(undefined); setFilterLocation(undefined); setFilter("all"); setShowFilterMenu(false); }}
+                  className="w-full text-left px-3 py-2 rounded-xl text-xs text-amber-300 hover:bg-white/10"
+                  role="menuitem"
+                >
+                  Search all countries worldwide
+                </button>
+                <label className="block px-3 pt-2 pb-1 text-[10px] text-white/50">Country / location</label>
+                <select
+                  value={filterLocation ?? ""}
+                  onChange={(event) => { setFilterGender(undefined); setFilterLocation(event.target.value || undefined); setFilter("all"); setShowFilterMenu(false); }}
+                  className="w-full rounded-xl px-3 py-2 text-xs text-white outline-none"
+                  style={{ background: "#32185d", border: "1px solid rgba(255,255,255,0.14)" }}
+                  aria-label="Choose a country or location"
+                >
+                  <option value="">Choose a country or location</option>
+                  {(locations ?? []).map((location) => <option key={location} value={location}>{location}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
           {FILTER_CHIPS.map((chip) => {
             const isActive = filter === chip.id;
             return (
@@ -217,12 +293,6 @@ export default function DiscoverTab() {
                 )}
                 {chip.id === "nearby" && (
                   <MapPin className="w-3 h-3 flex-shrink-0" />
-                )}
-                {chip.id === "all" && (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 flex-shrink-0">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                  </svg>
                 )}
                 {chip.label}
               </button>
@@ -254,7 +324,13 @@ export default function DiscoverTab() {
             </button>
           </div>
         ) : (
-          <div className="rounded-3xl overflow-hidden relative" style={{ border: "1px solid rgba(109,40,217,0.4)" }}>
+          <div
+            className="rounded-3xl overflow-hidden relative"
+            style={{ border: "1px solid rgba(109,40,217,0.4)", touchAction: "pan-y" }}
+            onPointerDown={handleSwipeStart}
+            onPointerUp={handleSwipeEnd}
+            onPointerCancel={() => { swipeStartRef.current = null; }}
+          >
             {/* Photo */}
             <div className="relative" style={{ aspectRatio: "3/4", maxHeight: 480 }}>
               {currentProfile.photoUrl ? (

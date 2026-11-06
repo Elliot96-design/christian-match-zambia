@@ -95,7 +95,7 @@ export default function NotificationsTab({ onTabChange }: { onTabChange: (tab: N
                   </span>
                 </div>
                 <p className="text-xs mt-0.5 leading-relaxed" style={{ color: "oklch(0.50 0.08 290)" }}>
-                  {n.description}
+                  {n.content ?? "You have a new Faithful Hearts update."}
                 </p>
 
                 {/* CTA for like */}

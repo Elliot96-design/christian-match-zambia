@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, like, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   Announcement,
@@ -625,6 +625,8 @@ export async function browseSwipeList(
   currentUserId: number,
   filter: "all" | "online" | "new" | "nearby",
   currentUserLocation: string | null,
+  gender?: "male" | "female",
+  location?: string,
   limit = 20,
   offset = 0
 ): Promise<User[]> {
@@ -637,14 +639,24 @@ export async function browseSwipeList(
     eq(users.profileComplete, true),
   ];
 
+  if (gender) {
+    conditions.push(eq(users.gender, gender));
+  }
+  if (location) {
+    conditions.push(like(users.location, `%${location}%`));
+  }
+
   if (filter === "online") {
-    conditions.push(eq(users.isOnline, true));
+    // Treat a member as online only when their heartbeat is recent.
+    const onlineCutoff = new Date(Date.now() - 2 * 60 * 1000);
+    conditions.push(eq(users.isOnline, true), gt(users.lastSeen, onlineCutoff));
   } else if (filter === "new") {
-    // New members: joined in the last 7 days
-    const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    conditions.push(sql`${users.createdAt} >= ${cutoff}`);
+    // New members: registered between 7 and 14 days ago.
+    const newest = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const oldest = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+    conditions.push(sql`${users.createdAt} >= ${oldest}`, sql`${users.createdAt} < ${newest}`);
   } else if (filter === "nearby" && currentUserLocation) {
-    conditions.push(eq(users.location, currentUserLocation));
+    conditions.push(like(users.location, `%${currentUserLocation}%`));
   }
 
   return db
@@ -1367,14 +1379,14 @@ export async function getUnreadNotifications(userId: number): Promise<Notificati
 /**
  * Mark a notification as read
  */
-export async function markNotificationAsRead(notificationId: number): Promise<void> {
+export async function markNotificationAsRead(notificationId: number, userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;
   
   await db
     .update(notifications)
     .set({ isRead: true })
-    .where(eq(notifications.id, notificationId));
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, userId)));
 }
 
 /**
