@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
 import PaymentModal from "@/components/PaymentModal";
+import { CHAT_UNLOCK_ZMW, formatPrice } from "@/lib/pricing";
 
 type FilterTab = "all" | "unread" | "unlocked" | "locked" | "chatroom";
 
@@ -232,7 +233,7 @@ export function MessagesTab({ navigate }: { navigate: (path: string) => void }) 
                         }}
                         className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-purple-900 font-bold rounded-full text-sm flex items-center gap-2 transition-all"
                       >
-                        <span>K20</span>
+                        <span>{formatPrice(CHAT_UNLOCK_ZMW, user?.location)}</span>
                         Unlock to chat
                       </button>
                     )}

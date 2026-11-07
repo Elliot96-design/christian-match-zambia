@@ -2,6 +2,8 @@ import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Crown, X, CheckCircle, AlertTriangle, Calendar, Zap } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { formatPrice, PREMIUM_FIRST_MONTH_ZMW, PREMIUM_MONTHLY_ZMW } from "@/lib/pricing";
 
 interface ManagePlanModalProps {
   onClose: () => void;
@@ -9,6 +11,7 @@ interface ManagePlanModalProps {
 }
 
 export default function ManagePlanModal({ onClose, onCancelled }: ManagePlanModalProps) {
+  const { user } = useAuth();
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { data: plan, isLoading } = trpc.profile.getPlanDetails.useQuery();
@@ -131,8 +134,8 @@ export default function ManagePlanModal({ onClose, onCancelled }: ManagePlanModa
                   Monthly fee
                 </span>
                 <span className="font-bold text-right" style={{ color: "#d4a017" }}>
-                  K50 first month<br />
-                  <span className="text-xs font-normal" style={{ color: "rgba(255,255,255,0.55)" }}>K100 / month after</span>
+                  {formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)} first month<br />
+                  <span className="text-xs font-normal" style={{ color: "rgba(255,255,255,0.55)" }}>{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month after</span>
                 </span>
               </div>
             </div>

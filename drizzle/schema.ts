@@ -112,8 +112,8 @@ export const chatUnlocks = mysqlTable("chat_unlocks", {
   payerId: int("payerId").notNull(),
   targetId: int("targetId").notNull(),
   status: mysqlEnum("status", ["pending", "completed", "failed"]).default("pending").notNull(),
-  amount: int("amount").default(20).notNull(), // K20
-  provider: mysqlEnum("provider", ["mtn", "airtel", "mock"]).default("mock").notNull(),
+  amount: int("amount").default(35).notNull(), // K35 chat unlock / premium amount is set explicitly
+  provider: mysqlEnum("provider", ["mtn", "airtel", "visa", "mock"]).default("mock").notNull(),
   reference: varchar("reference", { length: 128 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });

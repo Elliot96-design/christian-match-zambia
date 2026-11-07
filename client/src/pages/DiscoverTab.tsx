@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Crown, MapPin, Briefcase, Heart, ChevronRight, ChevronDown, X, RefreshCw, Lock, Check } from "lucide-react";
 import PaymentModal from "@/components/PaymentModal";
 import PremiumCheckoutModal from "@/components/PremiumCheckoutModal";
+import { CHAT_UNLOCK_ZMW, formatPrice, PREMIUM_FIRST_MONTH_ZMW, PREMIUM_MONTHLY_ZMW } from "@/lib/pricing";
 
 type DiscoverFilter = "all" | "online" | "new" | "nearby";
 type FilterChip = Exclude<DiscoverFilter, "all">;
@@ -227,7 +228,7 @@ export default function DiscoverTab() {
 
       {/* ── Filter chips ───────────────────────────────────────────────────── */}
       <div className="px-4 mb-3 flex-shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+        <div className="flex items-center gap-2 flex-wrap pb-1 overflow-visible">
           <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowFilterMenu((open) => !open)}
@@ -383,7 +384,7 @@ export default function DiscoverTab() {
                 </div>
               )}
 
-              {/* Top-right: photo counter + K20 badge */}
+              {/* Top-right: photo counter + K35 badge */}
               <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
                 <div
                   className="px-2.5 py-1 rounded-full text-xs font-semibold"
@@ -395,7 +396,7 @@ export default function DiscoverTab() {
                   className="px-2.5 py-1 rounded-full text-xs font-bold"
                   style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
                 >
-                  K20
+                  {formatPrice(CHAT_UNLOCK_ZMW, user?.location)}
                 </div>
               </div>
 
@@ -482,7 +483,7 @@ export default function DiscoverTab() {
               </div>
             </div>
 
-            {/* Unlock chat K20 CTA bar */}
+            {/* Unlock chat K35 CTA bar */}
             <div
               className="flex items-center gap-3 px-4 py-3.5"
               style={{ background: "rgba(20,10,45,0.97)", borderTop: "1px solid rgba(109,40,217,0.3)" }}
@@ -498,7 +499,7 @@ export default function DiscoverTab() {
                   Want to chat with {currentProfile.name?.split(" ")[0] ?? "them"}?
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: goldText }}>
-                  Pay K20 once off to unlock chat.
+                  Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location)} once off to unlock chat.
                 </p>
               </div>
               <button
@@ -507,7 +508,7 @@ export default function DiscoverTab() {
                 style={{ background: gold, color: "#1a0e35" }}
               >
                 Unlock Chat<br />
-                <span className="text-xs font-extrabold">K20</span>
+                <span className="text-xs font-extrabold">{formatPrice(CHAT_UNLOCK_ZMW, user?.location)}</span>
               </button>
             </div>
           </div>
@@ -563,8 +564,8 @@ export default function DiscoverTab() {
             <div className="flex-1 min-w-0">
               <p className="text-white/80 text-xs leading-relaxed">
                 Upgrade to premium for only{" "}
-                <span style={{ color: gold }} className="font-bold">K50</span> first month,{" "}
-                <span style={{ color: gold }} className="font-bold">K100</span> after and enjoy{" "}
+                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)}</span> first month,{" "}
+                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)}</span> after and enjoy{" "}
                 <span style={{ color: gold }} className="font-bold">unlimited</span> features plus have access to the chatroom.
               </p>
             </div>
@@ -576,8 +577,8 @@ export default function DiscoverTab() {
               >
                 Upgrade Now
               </button>
-              <p className="text-white/50 text-[10px] leading-tight">K50 first month</p>
-              <p className="text-white/50 text-[10px] leading-tight">K100 after</p>
+              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)} first month</p>
+              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} after</p>
             </div>
           </div>
 

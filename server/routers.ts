@@ -434,8 +434,8 @@ export const appRouter = router({
         planType: user.isPremium ? "Premium Monthly" : null,
         premiumSince: user.premiumSince ?? null,
         renewalDate,
-        amount: 50, // K50 first month, K100 after
-        renewalAmount: 100,
+        amount: 75, // K75 first month, K120 after
+        renewalAmount: 120,
         benefits: [
           "Unlimited chat unlocks",
           "Premium badge on your profile",
@@ -616,15 +616,16 @@ export const appRouter = router({
 
   // ─── Payments ─────────────────────────────────────────────────────────────
   payment: router({
-    // Initiate a premium subscription payment (K50 first month, K100 after)
+    // Initiate a premium subscription payment (K75 first month, K120 after)
     initiatePremium: protectedProcedure
-      .input(z.object({ provider: z.enum(["mtn", "airtel", "visa", "mock"]), phone: z.string().optional() }))
+      .input(z.object({ provider: z.enum(["mtn", "airtel", "visa"]), phone: z.string().optional(), plan: z.enum(["1month", "3months"]).default("1month") }))
       .mutation(async ({ ctx, input }) => {
         if (ctx.user.isBanned) throw new TRPCError({ code: "FORBIDDEN" });
         if (ctx.user.isPremium) throw new TRPCError({ code: "BAD_REQUEST", message: "Already a premium member." });
-        // K50 for first month, K100 recurring — charge K50 now
-        const id = await createPremiumPayment({ payerId: ctx.user.id, amount: 50, provider: input.provider });
-        return { paymentId: id, amount: 50, provider: input.provider };
+        // K75 first month; the existing three-month option is three K120 months.
+        const amount = input.plan === "3months" ? 360 : 75;
+        const id = await createPremiumPayment({ payerId: ctx.user.id, amount, provider: input.provider });
+        return { paymentId: id, amount, provider: input.provider };
       }),
 
     // Confirm a premium subscription payment and activate premium
@@ -640,12 +641,12 @@ export const appRouter = router({
         return { success: true, reference };
       }),
 
-    // Initiate a single-chat unlock payment (K20)
+    // Initiate a single-chat unlock payment (K35)
     initiate: protectedProcedure
       .input(
         z.object({
           targetId: z.number().int(),
-          provider: z.enum(["mtn", "airtel", "mock"]),
+          provider: z.enum(["mtn", "airtel", "visa"]),
           phone: z.string().optional(),
         })
       )
@@ -658,7 +659,7 @@ export const appRouter = router({
         const id = await createChatUnlock({
           payerId: ctx.user.id,
           targetId: input.targetId,
-          amount: 20,
+          amount: 35,
           provider: input.provider,
           status: "pending",
         });
@@ -669,7 +670,7 @@ export const appRouter = router({
           content: `${ctx.user.name} sent you a chat request. Unlock to reply!`,
           relatedUserId: ctx.user.id,
         });
-        return { paymentId: id, amount: 20, provider: input.provider };
+        return { paymentId: id, amount: 35, provider: input.provider };
       }),
 
     // Confirm a single-chat unlock payment
@@ -679,7 +680,7 @@ export const appRouter = router({
         const unlock = await getPendingUnlockById(input.paymentId, ctx.user.id);
         if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Payment not found or not yours." });
         if (unlock.status === "completed") throw new TRPCError({ code: "BAD_REQUEST", message: "Already completed." });
-        const reference = input.mockReference ?? `MOCK-${nanoid(12).toUpperCase()}`;
+        const reference = input.mockReference ?? `CHAT-${nanoid(12).toUpperCase()}`;
         await completeChatUnlock(input.paymentId, reference);
         return { success: true, reference };
       }),

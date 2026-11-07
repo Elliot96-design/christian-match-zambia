@@ -7,6 +7,7 @@ import { ArrowLeft, Lock, Send, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
+import { CHAT_UNLOCK_ZMW, formatPrice } from "@/lib/pricing";
 
 export default function ChatRoom() {
   const { id } = useParams<{ id: string }>();
@@ -102,7 +103,7 @@ export default function ChatRoom() {
             </div>
             <p className="font-display font-bold text-foreground text-lg">Chat Locked</p>
             <p className="text-muted-foreground text-sm mt-2 max-w-xs mx-auto">
-              This chat is not unlocked. Go back to the profile and pay K20 to unlock.
+              This chat is not unlocked. Go back to the profile and pay {formatPrice(CHAT_UNLOCK_ZMW, me?.location)} to unlock.
             </p>
             <Button
               className="mt-5 btn-purple px-8 h-12"

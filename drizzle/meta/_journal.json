@@ -120,6 +120,13 @@
       "when": 1792192192852,
       "tag": "0016_tan_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1794006779906,
+      "tag": "0017_fine_katie_power",
+      "breakpoints": true
     }
   ]
 }

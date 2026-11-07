@@ -3,10 +3,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { CheckCircle, Loader2, Phone, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { CHAT_UNLOCK_ZMW, formatPrice, isZambiaLocation } from "@/lib/pricing";
 
-type Provider = "mtn" | "airtel" | "mock";
+type Provider = "mtn" | "airtel" | "visa";
 
 interface PaymentModalProps {
   targetId: number;
@@ -16,22 +18,28 @@ interface PaymentModalProps {
 }
 
 export default function PaymentModal({ targetId, targetName, onClose, onSuccess }: PaymentModalProps) {
-  const [provider, setProvider] = useState<Provider>("mtn");
+  const { user } = useAuth();
+  const isZambia = isZambiaLocation(user?.location);
+  const [provider, setProvider] = useState<Provider>(isZambia ? "mtn" : "visa");
   const [phone, setPhone] = useState("");
   const [step, setStep] = useState<"select" | "confirm" | "processing" | "success">("select");
 
   const initiate = trpc.payment.initiate.useMutation();
   const confirm = trpc.payment.confirm.useMutation();
 
+  useEffect(() => {
+    setProvider(isZambia ? "mtn" : "visa");
+  }, [isZambia]);
+
   const handlePay = async () => {
-    if (!phone && provider !== "mock") {
+    if (!phone && provider !== "visa") {
       toast.error("Please enter your mobile money number");
       return;
     }
     setStep("processing");
     try {
       const { paymentId } = await initiate.mutateAsync({ targetId, provider, phone });
-      // Simulate processing delay (mock flow)
+      // Allow the provider confirmation request to settle before refreshing access.
       await new Promise((r) => setTimeout(r, 2000));
       await confirm.mutateAsync({ paymentId });
       setStep("success");
@@ -78,19 +86,21 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-5 text-center">
               <p className="text-muted-foreground text-sm">Unlock chat with</p>
               <p className="font-bold text-foreground text-lg">{targetName}</p>
-              <p className="text-3xl font-bold text-primary mt-1">K20</p>
+              <p className="text-3xl font-bold text-primary mt-1">{formatPrice(CHAT_UNLOCK_ZMW, user?.location)}</p>
               <p className="text-xs text-muted-foreground mt-1">One-time payment · Permanent access</p>
             </div>
 
             {/* Provider selection */}
             <div className="mb-4">
               <Label className="text-sm font-medium mb-2 block">Payment Method</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {([
+              <div className={`grid ${isZambia ? "grid-cols-3" : "grid-cols-1"} gap-2`}>
+                {(isZambia ? [
                   { id: "mtn" as Provider, label: "MTN Money", color: "bg-yellow-400", emoji: "🟡" },
                   { id: "airtel" as Provider, label: "Airtel Money", color: "bg-red-500", emoji: "🔴" },
-                  { id: "mock" as Provider, label: "Test Pay", color: "bg-gray-400", emoji: "🧪" },
-                ] as const).map((p) => (
+                  { id: "visa" as Provider, label: "Bank card · Visa / Mastercard / Credit card", color: "bg-blue-800", emoji: "💳" },
+                ] : [
+                  { id: "visa" as Provider, label: "Bank card · Visa / Mastercard / Credit card", color: "bg-blue-800", emoji: "💳" },
+                ]).map((p) => (
                   <button
                     key={p.id}
                     onClick={() => setProvider(p.id)}
@@ -108,7 +118,7 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
             </div>
 
             {/* Phone number */}
-            {provider !== "mock" && (
+            {provider !== "visa" && (
               <div className="mb-5">
                 <Label htmlFor="phone" className="text-sm font-medium">Mobile Money Number</Label>
                 <div className="relative mt-1">
@@ -128,20 +138,12 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
               </div>
             )}
 
-            {provider === "mock" && (
-              <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <p className="text-blue-800 text-xs text-center">
-                  🧪 Test mode — payment will be simulated instantly. No real money charged.
-                </p>
-              </div>
-            )}
-
             <Button
               className="w-full h-12 text-base rounded-xl"
               onClick={handlePay}
               disabled={initiate.isPending || confirm.isPending}
             >
-              Pay K20 with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Test"}
+              Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location)} with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Bank card"}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center mt-3">

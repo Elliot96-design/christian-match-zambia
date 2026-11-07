@@ -6,6 +6,7 @@ import { ArrowLeft, Church, Crown, Lock, MapPin, MessageCircle, User } from "luc
 import { useState, useEffect } from "react";
 import { useLocation, useParams } from "wouter";
 import PaymentModal from "@/components/PaymentModal";
+import { CHAT_UNLOCK_ZMW, formatPrice } from "@/lib/pricing";
 
 export default function ProfileView() {
   const { id } = useParams<{ id: string }>();
@@ -160,7 +161,7 @@ export default function ProfileView() {
               >
                 <Lock className="w-5 h-5" />
                 <span>
-                  Pay <span className="text-gold font-bold">K20</span> to unlock chat with {profile.name?.split(" ")[0] ?? "them"}
+                  Pay <span className="text-gold font-bold">{formatPrice(CHAT_UNLOCK_ZMW, me?.location)}</span> to unlock chat with {profile.name?.split(" ")[0] ?? "them"}
                 </span>
               </button>
             )}

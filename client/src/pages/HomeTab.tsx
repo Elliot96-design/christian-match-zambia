@@ -1,5 +1,6 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { CHAT_UNLOCK_ZMW, formatPrice, PREMIUM_FIRST_MONTH_ZMW, PREMIUM_MONTHLY_ZMW } from "@/lib/pricing";
 import {
   Bell, ChevronRight, Crown, Heart, Lock, MapPin,
   Share2, Briefcase, Cross, Megaphone,
@@ -57,6 +58,7 @@ function SuggestedProfileCard({
   onLike,
   onUpgradePremium,
   isPremiumUser,
+  payerLocation,
 }: {
   profile: {
     id: number;
@@ -73,6 +75,7 @@ function SuggestedProfileCard({
   onLike: (id: number) => void;
   onUpgradePremium: () => void;
   isPremiumUser: boolean;
+  payerLocation?: string | null;
 }) {
   const firstName = profile.name?.split(" ")[0] ?? "Member";
   const lastName = profile.name?.split(" ")[1]?.[0] ? `${profile.name.split(" ")[1][0]}.` : "";
@@ -158,7 +161,7 @@ function SuggestedProfileCard({
 
       {/* Bottom info */}
       <div className="px-2 pt-1.5 pb-2">
-        {/* K20 badge or premium upgrade */}
+        {/* K35 badge or premium upgrade */}
         {profile.isPremium && !isPremiumUser ? (
           <button
             onClick={() => onUpgradePremium()}
@@ -176,7 +179,7 @@ function SuggestedProfileCard({
               className="text-[10px] font-bold px-1.5 py-0.5 rounded flex-shrink-0"
               style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.18 0.12 290)" }}
             >
-              K20
+              {formatPrice(CHAT_UNLOCK_ZMW, payerLocation)}
             </span>
             <span className="text-[9px] text-left" style={{ color: "oklch(0.78 0.08 290)", }}>
               Once off payment<br />to unlock chat
@@ -501,7 +504,7 @@ export default function HomeTab({
                 <p className="text-[9px]" style={{ color: "oklch(0.70 0.05 290)" }}>✓ See who liked you</p>
                 <p className="text-[9px]" style={{ color: "oklch(0.70 0.05 290)" }}>✓ Unlimited matches</p>
                 <p className="text-[9px] mt-1 font-semibold" style={{ color: "oklch(0.72 0.16 80)" }}>
-                  K50 first month | K100 after
+                  {formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)} first month | {formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} after
                 </p>
               </div>
               <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" style={{ color: "oklch(0.72 0.16 80)" }} />
@@ -599,6 +602,7 @@ export default function HomeTab({
                   onLike={handleLike}
                   onUpgradePremium={() => setShowPremium(true)}
                   isPremiumUser={isPremium}
+                  payerLocation={user?.location}
                 />
               ))}
             </div>

@@ -478,7 +478,7 @@ export async function createPremiumPayment(data: {
     payerId: data.payerId,
     targetId: 0, // sentinel: 0 = premium subscription
     amount: data.amount,
-    provider: data.provider as "mtn" | "airtel" | "mock",
+    provider: data.provider as "mtn" | "airtel" | "visa" | "mock",
     status: "pending",
   });
   return (result[0] as { insertId: number }).insertId;
@@ -833,7 +833,7 @@ export async function getNotificationsForUser(userId: number): Promise<Notificat
         id: `like-${like.id}`,
         type: "like",
         title: "Someone unlocked your chat",
-        description: "A member paid K20 to start a conversation with you. Check your messages!",
+        description: "A member paid K35 to start a conversation with you. Check your messages!",
         createdAt: like.createdAt,
         read: false,
         meta: { payerId: like.payerId },
@@ -918,7 +918,7 @@ export async function getAdminStats(): Promise<{
   const verifiedUsers = allUsers.filter(u => u.isVerified).length;
   const newUsersToday = allUsers.filter(u => u.createdAt >= today).length;
   const chatUnlockRevenue = allPayments.reduce((sum, p) => sum + (p.amount ?? 0), 0);
-  const premiumRevenue = premiumUsers * 50; // K50 first month estimate
+  const premiumRevenue = premiumUsers * 75; // K75 first month estimate
   const openTickets = allTickets.filter(t => t.status === "open" || t.status === "in_progress").length;
   return {
     totalUsers: allUsers.length,
@@ -1120,7 +1120,7 @@ export async function getPremiumPaymentsList(): Promise<{
 }[]> {
   const db = await getDb();
   if (!db) return [];
-  // Use chatUnlocks as the payment source (both K20 unlocks and premium)
+  // Use chatUnlocks as the payment source (both K35 unlocks and premium)
   const rows = await db
     .select({
       id: chatUnlocks.id,
@@ -1243,7 +1243,7 @@ export async function getRealNotificationCount(userId: number): Promise<number> 
 
 /**
  * Get all potential conversation partners with their lock state
- * Returns: unlocked chats, locked chats (K20 unlock), and premium-only chats
+ * Returns: unlocked chats, locked chats (K35 unlock), and premium-only chats
  */
 export async function getAllConversationPartners(userId: number) {
   const db = await getDb();

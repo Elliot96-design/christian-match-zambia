@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { X, Loader2, Lock, CheckCircle } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { formatPrice, isZambiaLocation, PREMIUM_FIRST_MONTH_ZMW, PREMIUM_MONTHLY_ZMW } from "@/lib/pricing";
 
 type Plan = "1month" | "3months";
 type Provider = "mtn" | "airtel" | "visa";
@@ -11,21 +13,19 @@ interface PremiumCheckoutModalProps {
   onSuccess: () => void;
 }
 
-const PLANS = [
+const PLAN_DEFINITIONS = [
   {
     id: "1month" as Plan,
     name: "1 Month",
-    price: 50,
+    priceZmw: PREMIUM_FIRST_MONTH_ZMW,
     popular: true,
-    renewal: "K100 / month after",
     savings: null,
   },
   {
     id: "3months" as Plan,
     name: "3 Months",
-    price: 250,
+    priceZmw: PREMIUM_MONTHLY_ZMW * 3,
     popular: false,
-    renewal: "K83 / month billed every 3 months",
     savings: "Save 17%",
   },
 ];
@@ -49,7 +49,7 @@ const PROVIDERS = [
   },
   {
     id: "visa" as Provider,
-    label: "Visa / Mastercard",
+    label: "Bank card · Visa / Mastercard / Credit card",
     logo: "VISA",
     bgColor: "#1A1F71",
     textColor: "#fff",
@@ -73,9 +73,12 @@ const FEATURES = [
 type Step = "plan" | "method" | "phone" | "confirm" | "success";
 
 export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumCheckoutModalProps) {
+  const { user } = useAuth();
+  const isZambia = isZambiaLocation(user?.location);
+  const PLANS = PLAN_DEFINITIONS;
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<Plan>("1month");
-  const [selectedProvider, setSelectedProvider] = useState<Provider>("mtn");
+  const [selectedProvider, setSelectedProvider] = useState<Provider>(isZambia ? "mtn" : "visa");
   const [phone, setPhone] = useState("");
   const [paymentId, setPaymentId] = useState<number | null>(null);
 
@@ -99,6 +102,15 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
 
   const currentPlan = PLANS.find((p) => p.id === selectedPlan)!;
   const currentProvider = PROVIDERS.find((p) => p.id === selectedProvider)!;
+  const renewalLabel = selectedPlan === "1month"
+    ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month after`
+    : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month billed every 3 months`;
+  const availableProviders = isZambia ? PROVIDERS : PROVIDERS.filter((provider) => provider.id === "visa");
+
+  useEffect(() => {
+    if (!isZambia) setSelectedProvider("visa");
+    else if (selectedProvider === "visa") setSelectedProvider("mtn");
+  }, [isZambia, selectedProvider]);
 
   const handleContinue = () => {
     if (step === "plan") {
@@ -106,7 +118,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
     } else if (step === "method") {
       if (selectedProvider === "visa") {
         setStep("confirm");
-        initiate.mutate({ provider: selectedProvider });
+        initiate.mutate({ provider: selectedProvider, plan: selectedPlan });
       } else {
         setStep("phone");
       }
@@ -118,7 +130,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
       toast.error("Please enter a valid phone number");
       return;
     }
-    initiate.mutate({ provider: selectedProvider, phone: phone.trim() });
+    initiate.mutate({ provider: selectedProvider, phone: phone.trim(), plan: selectedPlan });
   };
 
   const handleConfirm = () => {
@@ -178,13 +190,13 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                       <div>
                         <p className="font-bold text-white">{plan.name}</p>
                         <p className="text-xs mt-0.5" style={{ color: "oklch(0.70 0.05 290)" }}>
-                          {plan.renewal}
+                          {plan.id === "1month" ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month after` : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month billed every 3 months`}
                         </p>
                       </div>
 
                       <div className="text-right">
                         <p className="text-3xl font-bold" style={{ color: "oklch(0.72 0.16 80)" }}>
-                          K{plan.price}
+                          {formatPrice(plan.priceZmw, user?.location)}
                         </p>
                         {plan.id === "1month" && (
                           <p className="text-xs mt-0.5" style={{ color: "oklch(0.72 0.16 80)" }}>
@@ -257,7 +269,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
               <p className="text-sm font-bold text-white mb-3">Choose Payment Method</p>
 
               <div className="space-y-3 mb-5">
-                {PROVIDERS.map((provider) => (
+                {availableProviders.map((provider) => (
                   <button
                     key={provider.id}
                     onClick={() => setSelectedProvider(provider.id)}
@@ -327,7 +339,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
               <div className="rounded-2xl p-3 mb-4" style={{ background: "oklch(0.15 0.10 290)" }}>
                 <p className="text-xs font-bold text-white mb-2">Manual Payment Option</p>
                 <p className="text-xs mb-2" style={{ color: "oklch(0.70 0.05 290)" }}>
-                  Send K{currentPlan.price} to:
+                  Send {formatPrice(currentPlan.priceZmw, user?.location)} to:
                 </p>
                 <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: "oklch(0.22 0.18 290)" }}>
                   <svg className="w-4 h-4" style={{ color: "oklch(0.72 0.16 80)" }} viewBox="0 0 24 24" fill="currentColor">
@@ -351,7 +363,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
 
               <p className="text-sm font-bold text-white mb-1">Or enter your {currentProvider.label} number</p>
               <p className="text-xs mb-4" style={{ color: "oklch(0.70 0.05 290)" }}>
-                You will receive a payment prompt on this number for K{currentPlan.price}.
+                You will receive a payment prompt on this number for {formatPrice(currentPlan.priceZmw, user?.location)}.
               </p>
 
               <div className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-4" style={{ background: "oklch(0.15 0.10 290)", border: "1px solid oklch(0.35 0.12 290)" }}>
@@ -393,10 +405,10 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
               </div>
 
               <div className="text-4xl font-display font-bold mb-1 text-white">
-                K{currentPlan.price}
+                {formatPrice(currentPlan.priceZmw, user?.location)}
               </div>
               <p className="text-xs mb-6" style={{ color: "oklch(0.70 0.05 290)" }}>
-                {currentPlan.renewal}
+                {renewalLabel}
               </p>
 
               <button

@@ -1,0 +1,2 @@
+ALTER TABLE `chat_unlocks` MODIFY COLUMN `amount` int NOT NULL DEFAULT 35;--> statement-breakpoint
+ALTER TABLE `chat_unlocks` MODIFY COLUMN `provider` enum('mtn','airtel','visa','mock') NOT NULL DEFAULT 'mock';
