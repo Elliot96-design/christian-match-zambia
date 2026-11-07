@@ -6,20 +6,20 @@ import { useLocation } from "wouter";
 
 export default function SuperAdmin() {
   const [, navigate] = useLocation();
-  const { data: users, refetch: refetchUsers } = trpc.admin.users.useQuery();
-  const { data: payments, refetch: refetchPayments } = trpc.admin.allPayments.useQuery();
-  const { data: announcements } = trpc.admin.allAnnouncements.useQuery();
-  const { data: stories } = trpc.admin.allLoveStories.useQuery();
-  const { data: tickets } = trpc.admin.supportTickets.useQuery();
-  const { data: admins } = trpc.admin.allAdmins.useQuery();
+  const { data: users, refetch: refetchUsers } = trpc.admin.users.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: payments, refetch: refetchPayments } = trpc.admin.allPayments.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: announcements } = trpc.admin.allAnnouncements.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: stories } = trpc.admin.allLoveStories.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: tickets } = trpc.admin.supportTickets.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: admins } = trpc.admin.allAdmins.useQuery(undefined, { refetchInterval: 30_000 });
 
   const totalUsers = users?.length ?? 0;
   const premiumUsers = users?.filter(u => u.isPremium).length ?? 0;
   const bannedUsers = users?.filter(u => u.isBanned).length ?? 0;
   const verifiedUsers = users?.filter(u => u.isVerified).length ?? 0;
   const totalRevenue = (payments ?? []).reduce((sum, p) => sum + (p.amount ?? 0), 0);
-  const chatUnlocks = (payments ?? []).filter(p => p.amount === 20).length;
-  const premiumSubs = (payments ?? []).filter(p => p.amount >= 50).length;
+  const chatUnlocks = (payments ?? []).filter(p => p.amount === 35).length;
+  const premiumSubs = (payments ?? []).filter(p => p.amount >= 75).length;
   const openTickets = (tickets ?? []).filter(t => t.status === "open").length;
 
   const panels = [

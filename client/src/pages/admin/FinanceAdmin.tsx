@@ -22,9 +22,9 @@ export default function FinanceAdmin() {
   const [approvingId, setApprovingId] = useState<number | null>(null);
   const PAGE_SIZE = 20;
 
-  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.stats.useQuery();
-  const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = trpc.admin.allPayments.useQuery();
-  const { data: pendingManualPayments, isLoading: pendingLoading, refetch: refetchPending } = trpc.admin.getPendingManualPayments.useQuery();
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = trpc.admin.stats.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: payments, isLoading: paymentsLoading, refetch: refetchPayments } = trpc.admin.allPayments.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: pendingManualPayments, isLoading: pendingLoading, refetch: refetchPending } = trpc.admin.getPendingManualPayments.useQuery(undefined, { refetchInterval: 30_000 });
   
   const approvePayment = trpc.admin.approveManualPayment.useMutation({
     onSuccess: () => {

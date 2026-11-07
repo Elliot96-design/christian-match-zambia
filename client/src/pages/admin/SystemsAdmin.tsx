@@ -1,11 +1,11 @@
 import { useState, useEffect, type JSX } from "react";
 import AdminShell from "@/components/AdminShell";
 import { trpc } from "@/lib/trpc";
-import { Save, RefreshCw, BookOpen, Home, Navigation, Info } from "lucide-react";
+import { Save, RefreshCw, BookOpen, Home, Navigation, Info, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SystemsAdmin() {
-  const [activeSection, setActiveSection] = useState<"welcome" | "home" | "navigation" | "bible">("welcome");
+  const [activeSection, setActiveSection] = useState<"welcome" | "home" | "navigation" | "bible" | "fx">("welcome");
 
   const { data: settings, isLoading, refetch } = trpc.admin.appSettings.useQuery();
   const updateMutation = trpc.admin.updateSetting.useMutation({
@@ -26,6 +26,7 @@ export default function SystemsAdmin() {
   const [navChatroom, setNavChatroom] = useState("");
   const [navMessages, setNavMessages] = useState("");
   const [navProfile, setNavProfile] = useState("");
+  const [zmwPerUsd, setZmwPerUsd] = useState("25");
 
   useEffect(() => {
     if (!settings) return;
@@ -42,6 +43,7 @@ export default function SystemsAdmin() {
     setNavChatroom(get("nav_chatroom", "Chatroom"));
     setNavMessages(get("nav_messages", "Messages"));
     setNavProfile(get("nav_profile", "Profile"));
+    setZmwPerUsd(get("fx_zmw_per_usd", "25"));
   }, [settings]);
 
   const save = (key: string, value: string) => updateMutation.mutate({ key, value });
@@ -51,6 +53,7 @@ export default function SystemsAdmin() {
     { id: "home" as const, label: "Home Screen", icon: <Home className="w-4 h-4" /> },
     { id: "navigation" as const, label: "Bottom Navigation", icon: <Navigation className="w-4 h-4" /> },
     { id: "bible" as const, label: "Daily Bible Verse", icon: <BookOpen className="w-4 h-4" /> },
+    { id: "fx" as const, label: "Currency & Pricing", icon: <DollarSign className="w-4 h-4" /> },
   ];
 
   const FieldRow = ({ label, value, onChange, onSave, multiline = false }: {
@@ -150,6 +153,14 @@ export default function SystemsAdmin() {
               <FieldRow label="Verse text" value={bibleVerse} onChange={setBibleVerse} onSave={() => save("bible_verse_text", bibleVerse)} multiline />
               <FieldRow label="Reference (e.g. Proverbs 3:5-6 NIV)" value={bibleRef} onChange={setBibleRef} onSave={() => save("bible_verse_ref", bibleRef)} />
               <p className="text-white/30 text-xs mt-2">Changes will appear on the Home screen immediately after saving.</p>
+            </>
+          )}
+
+          {activeSection === "fx" && (
+            <>
+              <h3 className="text-white font-semibold text-sm mb-4">Localized Currency</h3>
+              <FieldRow label="ZMW per USD" value={zmwPerUsd} onChange={setZmwPerUsd} onSave={() => save("fx_zmw_per_usd", zmwPerUsd)} />
+              <p className="text-white/40 text-xs mt-2">Use a positive market rate, for example 25 means 1 USD = K25. Other-country checkout screens read this setting live; Zambia members continue to see kwacha.</p>
             </>
           )}
         </div>

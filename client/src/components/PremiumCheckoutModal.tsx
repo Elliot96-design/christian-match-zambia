@@ -74,12 +74,16 @@ type Step = "plan" | "method" | "phone" | "confirm" | "success";
 
 export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumCheckoutModalProps) {
   const { user } = useAuth();
+  const { data: fx } = trpc.pricing.exchangeRate.useQuery();
   const isZambia = isZambiaLocation(user?.location);
   const PLANS = PLAN_DEFINITIONS;
   const [step, setStep] = useState<Step>("plan");
   const [selectedPlan, setSelectedPlan] = useState<Plan>("1month");
   const [selectedProvider, setSelectedProvider] = useState<Provider>(isZambia ? "mtn" : "visa");
   const [phone, setPhone] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
   const [paymentId, setPaymentId] = useState<number | null>(null);
 
   const initiate = trpc.payment.initiatePremium.useMutation({
@@ -103,8 +107,8 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
   const currentPlan = PLANS.find((p) => p.id === selectedPlan)!;
   const currentProvider = PROVIDERS.find((p) => p.id === selectedProvider)!;
   const renewalLabel = selectedPlan === "1month"
-    ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month after`
-    : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month billed every 3 months`;
+    ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)} / month after`
+    : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)} / month billed every 3 months`;
   const availableProviders = isZambia ? PROVIDERS : PROVIDERS.filter((provider) => provider.id === "visa");
 
   useEffect(() => {
@@ -118,7 +122,6 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
     } else if (step === "method") {
       if (selectedProvider === "visa") {
         setStep("confirm");
-        initiate.mutate({ provider: selectedProvider, plan: selectedPlan });
       } else {
         setStep("phone");
       }
@@ -134,8 +137,15 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
   };
 
   const handleConfirm = () => {
-    if (paymentId === null) return;
-    confirm.mutate({ paymentId });
+    if (selectedProvider === "visa" && paymentId === null) {
+      if (cardNumber.replace(/\s/g, "").length < 12 || !/^\d{2}\/\d{2}$/.test(cardExpiry) || cardCvc.length < 3) {
+        toast.error("Enter valid card details before continuing");
+        return;
+      }
+      initiate.mutate({ provider: selectedProvider, plan: selectedPlan });
+      return;
+    }
+    if (paymentId !== null) confirm.mutate({ paymentId });
   };
 
   return (
@@ -190,13 +200,13 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                       <div>
                         <p className="font-bold text-white">{plan.name}</p>
                         <p className="text-xs mt-0.5" style={{ color: "oklch(0.70 0.05 290)" }}>
-                          {plan.id === "1month" ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month after` : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} / month billed every 3 months`}
+                          {plan.id === "1month" ? `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)} / month after` : `${formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)} / month billed every 3 months`}
                         </p>
                       </div>
 
                       <div className="text-right">
                         <p className="text-3xl font-bold" style={{ color: "oklch(0.72 0.16 80)" }}>
-                          {formatPrice(plan.priceZmw, user?.location)}
+                          {formatPrice(plan.priceZmw, user?.location, fx?.zmwPerUsd)}
                         </p>
                         {plan.id === "1month" && (
                           <p className="text-xs mt-0.5" style={{ color: "oklch(0.72 0.16 80)" }}>
@@ -339,7 +349,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
               <div className="rounded-2xl p-3 mb-4" style={{ background: "oklch(0.15 0.10 290)" }}>
                 <p className="text-xs font-bold text-white mb-2">Manual Payment Option</p>
                 <p className="text-xs mb-2" style={{ color: "oklch(0.70 0.05 290)" }}>
-                  Send {formatPrice(currentPlan.priceZmw, user?.location)} to:
+                  Send {formatPrice(currentPlan.priceZmw, user?.location, fx?.zmwPerUsd)} to:
                 </p>
                 <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: "oklch(0.22 0.18 290)" }}>
                   <svg className="w-4 h-4" style={{ color: "oklch(0.72 0.16 80)" }} viewBox="0 0 24 24" fill="currentColor">
@@ -363,7 +373,7 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
 
               <p className="text-sm font-bold text-white mb-1">Or enter your {currentProvider.label} number</p>
               <p className="text-xs mb-4" style={{ color: "oklch(0.70 0.05 290)" }}>
-                You will receive a payment prompt on this number for {formatPrice(currentPlan.priceZmw, user?.location)}.
+                You will receive a payment prompt on this number for {formatPrice(currentPlan.priceZmw, user?.location, fx?.zmwPerUsd)}.
               </p>
 
               <div className="flex items-center gap-3 rounded-2xl px-4 py-3 mb-4" style={{ background: "oklch(0.15 0.10 290)", border: "1px solid oklch(0.35 0.12 290)" }}>
@@ -404,8 +414,20 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
                 </p>
               </div>
 
+              {selectedProvider === "visa" && paymentId === null && (
+                <div className="mb-5 space-y-3 rounded-2xl border border-white/10 p-4 text-left" style={{ background: "oklch(0.15 0.10 290)" }}>
+                  <p className="text-xs font-semibold text-white">Secure bank-card details</p>
+                  <input aria-label="Card number" inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9 ]/g, "").slice(0, 19))} placeholder="Card number" className="w-full rounded-xl px-3 py-3 text-sm text-white outline-none" style={{ background: "oklch(0.22 0.18 290)" }} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input aria-label="Card expiry" inputMode="numeric" autoComplete="cc-exp" value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))} placeholder="MM/YY" className="rounded-xl px-3 py-3 text-sm text-white outline-none" style={{ background: "oklch(0.22 0.18 290)" }} />
+                    <input aria-label="Card security code" inputMode="numeric" autoComplete="cc-csc" type="password" value={cardCvc} onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="CVC" className="rounded-xl px-3 py-3 text-sm text-white outline-none" style={{ background: "oklch(0.22 0.18 290)" }} />
+                  </div>
+                  <p className="text-[11px]" style={{ color: "oklch(0.70 0.05 290)" }}>Card details stay in this secure form and are never stored or sent to Faithful Hearts. Connect a PCI-compliant card gateway before charging live cards.</p>
+                </div>
+              )}
+
               <div className="text-4xl font-display font-bold mb-1 text-white">
-                {formatPrice(currentPlan.priceZmw, user?.location)}
+                {formatPrice(currentPlan.priceZmw, user?.location, fx?.zmwPerUsd)}
               </div>
               <p className="text-xs mb-6" style={{ color: "oklch(0.70 0.05 290)" }}>
                 {renewalLabel}
@@ -413,12 +435,12 @@ export default function PremiumCheckoutModal({ onClose, onSuccess }: PremiumChec
 
               <button
                 onClick={handleConfirm}
-                disabled={confirm.isPending || !paymentId}
+                disabled={confirm.isPending || initiate.isPending || (selectedProvider !== "visa" && !paymentId)}
                 className="w-full py-3.5 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-60"
                 style={{ background: "oklch(0.72 0.16 80)", color: "oklch(0.22 0.18 290)" }}
               >
                 {confirm.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                {confirm.isPending ? "Activating…" : "I've Paid — Activate Premium"}
+                {confirm.isPending || initiate.isPending ? "Processing…" : selectedProvider === "visa" && !paymentId ? "Continue securely" : "I've Paid — Activate Premium"}
               </button>
             </div>
           )}

@@ -8,7 +8,7 @@ export function isZambiaLocation(location?: string | null): boolean {
   return !location || /\bzambia\b/i.test(location);
 }
 
-export function formatPrice(zmw: number, location?: string | null): string {
+export function formatPrice(zmw: number, location?: string | null, zmwPerUsd = ZMW_PER_USD): string {
   if (isZambiaLocation(location)) return `K${zmw}`;
-  return `$${(zmw / ZMW_PER_USD).toFixed(2)}`;
+  return `$${(zmw / zmwPerUsd).toFixed(2)}`;
 }

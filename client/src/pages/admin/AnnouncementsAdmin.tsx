@@ -18,8 +18,8 @@ export default function AnnouncementsAdmin() {
   const [storyText, setStoryText] = useState("");
   const [storyPhoto, setStoryPhoto] = useState("");
 
-  const { data: announcements, isLoading: annLoading, refetch: refetchAnn } = trpc.admin.allAnnouncements.useQuery();
-  const { data: stories, isLoading: storiesLoading, refetch: refetchStories } = trpc.admin.allLoveStories.useQuery();
+  const { data: announcements, isLoading: annLoading, refetch: refetchAnn } = trpc.admin.allAnnouncements.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: stories, isLoading: storiesLoading, refetch: refetchStories } = trpc.admin.allLoveStories.useQuery(undefined, { refetchInterval: 30_000 });
 
   const createAnnMutation = trpc.admin.createAnnouncement.useMutation({
     onSuccess: () => {

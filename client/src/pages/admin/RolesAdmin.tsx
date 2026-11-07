@@ -23,8 +23,8 @@ export default function RolesAdmin() {
   const [pin, setPin] = useState("");
   const [panel, setPanel] = useState<typeof PANELS[number]["id"]>("finance");
 
-  const { data: admins, isLoading, refetch } = trpc.admin.allAdmins.useQuery();
-  const { data: users } = trpc.admin.users.useQuery();
+  const { data: admins, isLoading, refetch } = trpc.admin.allAdmins.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: users } = trpc.admin.users.useQuery(undefined, { refetchInterval: 30_000 });
 
   const promoteMutation = trpc.admin.promoteToAdmin.useMutation({
     onSuccess: () => {

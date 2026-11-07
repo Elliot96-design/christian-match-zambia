@@ -49,12 +49,14 @@ export default function DiscoverTab() {
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const utils = trpc.useUtils();
+  const { data: fx } = trpc.pricing.exchangeRate.useQuery();
 
   const [filter, setFilter] = useState<DiscoverFilter>("all");
   const [filterGender, setFilterGender] = useState<"male" | "female" | undefined>();
   const [filterLocation, setFilterLocation] = useState<string | undefined>();
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [showCountryMenu, setShowCountryMenu] = useState(false);
+  const selectedFilterLabel = filterLocation ?? (filterGender === "male" ? "Male" : filterGender === "female" ? "Female" : "All");
   const [cardIndex, setCardIndex] = useState(0);
   const [showPayment, setShowPayment] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
@@ -242,6 +244,7 @@ export default function DiscoverTab() {
               aria-expanded={showFilterMenu}
             >
               <span>Filtering</span>
+              <span className="text-amber-300">· {selectedFilterLabel}</span>
               <ChevronDown className="w-3 h-3" />
             </button>
             {showFilterMenu && (
@@ -396,7 +399,7 @@ export default function DiscoverTab() {
                   className="px-2.5 py-1 rounded-full text-xs font-bold"
                   style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(6px)", color: "white", border: "1px solid rgba(255,255,255,0.2)" }}
                 >
-                  {formatPrice(CHAT_UNLOCK_ZMW, user?.location)}
+                  {formatPrice(CHAT_UNLOCK_ZMW, user?.location, fx?.zmwPerUsd)}
                 </div>
               </div>
 
@@ -499,7 +502,7 @@ export default function DiscoverTab() {
                   Want to chat with {currentProfile.name?.split(" ")[0] ?? "them"}?
                 </p>
                 <p className="text-xs mt-0.5" style={{ color: goldText }}>
-                  Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location)} once off to unlock chat.
+                  Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location, fx?.zmwPerUsd)} once off to unlock chat.
                 </p>
               </div>
               <button
@@ -508,7 +511,7 @@ export default function DiscoverTab() {
                 style={{ background: gold, color: "#1a0e35" }}
               >
                 Unlock Chat<br />
-                <span className="text-xs font-extrabold">{formatPrice(CHAT_UNLOCK_ZMW, user?.location)}</span>
+                <span className="text-xs font-extrabold">{formatPrice(CHAT_UNLOCK_ZMW, user?.location, fx?.zmwPerUsd)}</span>
               </button>
             </div>
           </div>
@@ -564,8 +567,8 @@ export default function DiscoverTab() {
             <div className="flex-1 min-w-0">
               <p className="text-white/80 text-xs leading-relaxed">
                 Upgrade to premium for only{" "}
-                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)}</span> first month,{" "}
-                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)}</span> after and enjoy{" "}
+                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location, fx?.zmwPerUsd)}</span> first month,{" "}
+                <span style={{ color: gold }} className="font-bold">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)}</span> after and enjoy{" "}
                 <span style={{ color: gold }} className="font-bold">unlimited</span> features plus have access to the chatroom.
               </p>
             </div>
@@ -577,8 +580,8 @@ export default function DiscoverTab() {
               >
                 Upgrade Now
               </button>
-              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location)} first month</p>
-              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location)} after</p>
+              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_FIRST_MONTH_ZMW, user?.location, fx?.zmwPerUsd)} first month</p>
+              <p className="text-white/50 text-[10px] leading-tight">{formatPrice(PREMIUM_MONTHLY_ZMW, user?.location, fx?.zmwPerUsd)} after</p>
             </div>
           </div>
 

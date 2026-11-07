@@ -12,8 +12,8 @@ export default function SupportAdmin() {
   const [replyText, setReplyText] = useState("");
   const [replyStatus, setReplyStatus] = useState<TicketStatus>("resolved");
 
-  const { data: tickets, isLoading: ticketsLoading, refetch: refetchTickets } = trpc.admin.supportTickets.useQuery();
-  const { data: chatMessages, isLoading: chatLoading, refetch: refetchChat } = trpc.admin.chatroomMessages.useQuery();
+  const { data: tickets, isLoading: ticketsLoading, refetch: refetchTickets } = trpc.admin.supportTickets.useQuery(undefined, { refetchInterval: 30_000 });
+  const { data: chatMessages, isLoading: chatLoading, refetch: refetchChat } = trpc.admin.chatroomMessages.useQuery(undefined, { refetchInterval: 30_000 });
 
   const resolveTicketMutation = trpc.admin.resolveTicket.useMutation({
     onSuccess: () => {

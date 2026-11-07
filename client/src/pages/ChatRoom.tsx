@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { LOGO_URL } from "@/components/AppHeader";
-import { ArrowLeft, Lock, Send, User } from "lucide-react";
+import { ArrowLeft, Camera, Lock, Mic, Send, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useParams } from "wouter";
 import { toast } from "sonner";
@@ -16,6 +16,10 @@ export default function ChatRoom() {
   const [, navigate] = useLocation();
   const [message, setMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
   const utils = trpc.useUtils();
 
   const { data: target } = trpc.profile.get.useQuery(
@@ -44,6 +48,10 @@ export default function ChatRoom() {
       toast.error(err.message ?? "Failed to send message");
     },
   });
+  const sendAttachment = trpc.chat.sendAttachment.useMutation({
+    onSuccess: () => utils.chat.messages.invalidate({ targetId }),
+    onError: (err) => toast.error(err.message),
+  });
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -67,6 +75,48 @@ export default function ChatRoom() {
       e.preventDefault();
       handleSend();
     }
+  };
+
+  const fileToBase64 = (file: Blob) => new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const handlePhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { toast.error("Photo must be under 5MB"); return; }
+    await sendAttachment.mutateAsync({ targetId, attachmentType: "photo", base64: await fileToBase64(file), mimeType: file.type });
+  };
+
+  const toggleVoice = async () => {
+    if (!me?.isPremium) { toast.error("Voice notes are available to premium members only."); return; }
+    if (isRecording && recorderRef.current) { recorderRef.current.stop(); return; }
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+    chunksRef.current = [];
+    recorder.ondataavailable = (event) => chunksRef.current.push(event.data);
+    recorder.onstop = async () => {
+      stream.getTracks().forEach((track) => track.stop());
+      setIsRecording(false);
+      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+      await sendAttachment.mutateAsync({ targetId, attachmentType: "voice", base64: await fileToBase64(blob), mimeType: "audio/webm" });
+    };
+    recorderRef.current = recorder;
+    recorder.start();
+    setIsRecording(true);
+  };
+
+  const renderMessage = (content: string) => {
+    try {
+      const attachment = JSON.parse(content) as { kind?: string; url?: string };
+      if (attachment.kind === "photo" && attachment.url) return <img src={attachment.url} alt="Shared photo" className="max-w-full rounded-xl" />;
+      if (attachment.kind === "voice" && attachment.url) return <audio controls src={attachment.url} className="max-w-full" />;
+    } catch { /* ordinary text message */ }
+    return <p>{content}</p>;
   };
 
   return (
@@ -146,7 +196,7 @@ export default function ChatRoom() {
                       }`}
                       style={isMine ? { background: "oklch(0.28 0.20 290)" } : {}}
                     >
-                      <p>{msg.content}</p>
+                      {renderMessage(msg.content)}
                       <p className={`text-[10px] mt-1 ${isMine ? "text-white/60" : "text-muted-foreground"}`}>
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                       </p>
@@ -159,7 +209,14 @@ export default function ChatRoom() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-border px-4 py-3 flex items-center gap-3 bg-white flex-shrink-0">
+          <div className="border-t border-border px-4 py-3 flex items-center gap-2 bg-white flex-shrink-0">
+            <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+            <button onClick={() => photoRef.current?.click()} disabled={sendAttachment.isPending} className="w-10 h-10 rounded-full flex items-center justify-center bg-secondary text-primary disabled:opacity-40" aria-label="Share photo">
+              <Camera className="w-4 h-4" />
+            </button>
+            <button onClick={toggleVoice} disabled={sendAttachment.isPending} className={`w-10 h-10 rounded-full flex items-center justify-center ${isRecording ? "bg-red-500 text-white" : "bg-secondary text-primary"} disabled:opacity-40`} aria-label="Record voice note">
+              <Mic className="w-4 h-4" />
+            </button>
             <Input
               value={message}
               onChange={(e) => setMessage(e.target.value)}

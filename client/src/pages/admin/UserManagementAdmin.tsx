@@ -8,7 +8,7 @@ export default function UserManagementAdmin() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "premium" | "banned" | "verified">("all");
 
-  const { data: users, isLoading, refetch } = trpc.admin.users.useQuery();
+  const { data: users, isLoading, refetch } = trpc.admin.users.useQuery(undefined, { refetchInterval: 30_000 });
 
   const banMutation = trpc.admin.banUser.useMutation({
     onSuccess: () => { toast.success("User ban status updated"); refetch(); },

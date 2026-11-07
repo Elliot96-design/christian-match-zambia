@@ -602,6 +602,25 @@ export const appRouter = router({
         return msg;
       }),
 
+    sendAttachment: protectedProcedure
+      .input(z.object({ targetId: z.number().int(), attachmentType: z.enum(["photo", "voice"]), base64: z.string().max(8_000_000), mimeType: z.string().max(100) }))
+      .mutation(async ({ ctx, input }) => {
+        const unlock = await getChatUnlock(ctx.user.id, input.targetId);
+        if (!unlock) throw new TRPCError({ code: "FORBIDDEN", message: "Chat not unlocked." });
+        if (input.attachmentType === "voice" && !ctx.user.isPremium) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Voice notes are available to premium members only." });
+        }
+        const raw = input.base64.replace(/^data:[^;]+;base64,/, "");
+        const bytes = Buffer.from(raw, "base64");
+        const extension = input.mimeType.split("/")[1]?.replace(/[^a-z0-9]/gi, "") || "bin";
+        const key = `chat/${ctx.user.id}/${Date.now()}-${nanoid(8)}.${extension}`;
+        const { url } = await storagePut(key, bytes, input.mimeType);
+        const roomId = buildRoomId(ctx.user.id, input.targetId);
+        const msg = await sendMessage({ roomId, senderId: ctx.user.id, content: JSON.stringify({ kind: input.attachmentType, url }) });
+        await createNotification({ userId: input.targetId, type: "message", title: input.attachmentType === "voice" ? "New Voice Note" : "New Photo", content: `${ctx.user.name ?? "A member"} sent you a ${input.attachmentType}.`, relatedUserId: ctx.user.id });
+        return msg;
+      }),
+
     markAsRead: protectedProcedure
       .input(z.object({ targetId: z.number().int() }))
       .mutation(async ({ ctx, input }) => {
@@ -837,6 +856,14 @@ export const appRouter = router({
     }),
   }),
 
+  pricing: router({
+    exchangeRate: protectedProcedure.query(async () => {
+      const configured = await getAppSetting("fx_zmw_per_usd");
+      const rate = Number(configured);
+      return { zmwPerUsd: Number.isFinite(rate) && rate > 0 ? rate : 25 };
+    }),
+  }),
+
   // ─── Admin ────────────────────────────────────────────────────────────────
   admin: router({
     users: adminProcedure.query(async () => {
@@ -880,18 +907,19 @@ export const appRouter = router({
       return getPremiumPaymentsList();
     }),
     getPendingManualPayments: adminProcedure.query(async () => {
-      return [] as { id: number; amount: number; provider: string; createdAt: Date }[];
+      const payments = await getAllPayments();
+      return payments.filter((payment) => payment.status === "pending");
     }),
     approveManualPayment: adminProcedure
       .input(z.object({ paymentId: z.number().int() }))
       .mutation(async ({ input }) => {
-        const unlock = await getPendingUnlockById(input.paymentId, 0);
-        if (!unlock) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
-        if (unlock.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Payment already processed" });
+        const payment = (await getAllPayments()).find((item) => item.id === input.paymentId);
+        if (!payment) throw new TRPCError({ code: "NOT_FOUND", message: "Payment not found" });
+        if (payment.status !== "pending") throw new TRPCError({ code: "BAD_REQUEST", message: "Payment already processed" });
         
         const reference = `MAN-${nanoid(12).toUpperCase()}`;
         await completeChatUnlock(input.paymentId, reference);
-        await setUserPremium(unlock.payerId, true);
+        if (payment.targetId === 0) await setUserPremium(payment.payerId, true);
         return { success: true, reference };
       }),
     // ── Support Admin ──────────────────────────────────────────────────────

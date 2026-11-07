@@ -207,9 +207,11 @@ export function MessagesTab({ navigate }: { navigate: (path: string) => void }) 
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            navigate(`/chat/${conversation.id}`);
+                            if (user?.isPremium) navigate(`/chat/${conversation.id}?call=video`);
+                            else handleUpgradeClick();
                           }}
                           className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                          aria-label={user?.isPremium ? "Start video call" : "Upgrade for video calls"}
                         >
                           <Video className="w-5 h-5 text-white" />
                         </button>

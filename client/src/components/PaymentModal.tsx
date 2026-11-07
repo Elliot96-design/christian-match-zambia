@@ -19,9 +19,13 @@ interface PaymentModalProps {
 
 export default function PaymentModal({ targetId, targetName, onClose, onSuccess }: PaymentModalProps) {
   const { user } = useAuth();
+  const { data: fx } = trpc.pricing.exchangeRate.useQuery();
   const isZambia = isZambiaLocation(user?.location);
   const [provider, setProvider] = useState<Provider>(isZambia ? "mtn" : "visa");
   const [phone, setPhone] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
   const [step, setStep] = useState<"select" | "confirm" | "processing" | "success">("select");
 
   const initiate = trpc.payment.initiate.useMutation();
@@ -32,6 +36,10 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
   }, [isZambia]);
 
   const handlePay = async () => {
+    if (provider === "visa" && (cardNumber.replace(/\s/g, "").length < 12 || !/^\d{2}\/\d{2}$/.test(cardExpiry) || cardCvc.length < 3)) {
+      toast.error("Enter valid card details before continuing");
+      return;
+    }
     if (!phone && provider !== "visa") {
       toast.error("Please enter your mobile money number");
       return;
@@ -86,7 +94,7 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
             <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 mb-5 text-center">
               <p className="text-muted-foreground text-sm">Unlock chat with</p>
               <p className="font-bold text-foreground text-lg">{targetName}</p>
-              <p className="text-3xl font-bold text-primary mt-1">{formatPrice(CHAT_UNLOCK_ZMW, user?.location)}</p>
+              <p className="text-3xl font-bold text-primary mt-1">{formatPrice(CHAT_UNLOCK_ZMW, user?.location, fx?.zmwPerUsd)}</p>
               <p className="text-xs text-muted-foreground mt-1">One-time payment · Permanent access</p>
             </div>
 
@@ -138,12 +146,24 @@ export default function PaymentModal({ targetId, targetName, onClose, onSuccess 
               </div>
             )}
 
+            {provider === "visa" && (
+              <div className="mb-5 space-y-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <p className="text-xs font-semibold text-foreground">Secure bank-card details</p>
+                <Input aria-label="Card number" inputMode="numeric" autoComplete="cc-number" value={cardNumber} onChange={(e) => setCardNumber(e.target.value.replace(/[^0-9 ]/g, "").slice(0, 19))} placeholder="Card number" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input aria-label="Card expiry" inputMode="numeric" autoComplete="cc-exp" value={cardExpiry} onChange={(e) => setCardExpiry(e.target.value.replace(/[^0-9/]/g, "").slice(0, 5))} placeholder="MM/YY" />
+                  <Input aria-label="Card security code" inputMode="numeric" autoComplete="cc-csc" type="password" value={cardCvc} onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))} placeholder="CVC" />
+                </div>
+                <p className="text-[11px] text-muted-foreground">Card details stay in this secure form and are never stored or sent to Faithful Hearts. Connect a PCI-compliant card gateway before charging live cards.</p>
+              </div>
+            )}
+
             <Button
               className="w-full h-12 text-base rounded-xl"
               onClick={handlePay}
               disabled={initiate.isPending || confirm.isPending}
             >
-              Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location)} with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Bank card"}
+              Pay {formatPrice(CHAT_UNLOCK_ZMW, user?.location, fx?.zmwPerUsd)} with {provider === "mtn" ? "MTN Money" : provider === "airtel" ? "Airtel Money" : "Bank card"}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center mt-3">
